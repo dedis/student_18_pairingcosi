@@ -1,3 +1,4 @@
+
 package protocol
 
 import (
@@ -73,7 +74,6 @@ type StructStop struct {
 }
 
 
-
 func Test() {
-	fmt.Println("yo")
+	fmt.Println("hello")
 }
