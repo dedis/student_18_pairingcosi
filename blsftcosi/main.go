@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bls-ftcosi/protocol"
+	"bls-ftcosi/blsftcosi/protocol"
 )
 
 func main() {

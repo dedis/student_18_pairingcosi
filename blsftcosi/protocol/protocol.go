@@ -153,10 +153,10 @@ func (p *BlsFtCosi) Dispatch() error {
 	log.Lvl3(p.ServerIdentity().Address, "all sub protocols started")
 
 	// Wait and collect all the signatures
-	signatures, runningSubProtocols, err := p.collectSignatures(trees, cosiSubProtocols)
-	if err != nil {
-		return err
-	}
+	//signatures, runningSubProtocols, err := p.collectSignatures(trees, cosiSubProtocols)
+	//if err != nil {
+	//	return err
+	//}
 
 	// aggregate signatures and send back to client that requested it
 
@@ -167,12 +167,11 @@ func (p *BlsFtCosi) Dispatch() error {
 
 // Collect signatures from each sub-leader, restart whereever sub-leaders fail to respond.
 // The collected signatures are already aggregated for a particular group
-func (p *FtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*SubBlsFtCosi)
-	([]StructResponse, []*SubBlsFtCosi, error) {
+func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*SubBlsFtCosi) ([]StructResponse, []*SubBlsFtCosi, error) {
 
-	var mut sync.Mutex
-	var wg sync.WaitGroup
-	errChan := make(chan error, len(cosiSubProtocols))
+	//var mut sync.Mutex
+	//var wg sync.WaitGroup
+	//errChan := make(chan error, len(cosiSubProtocols))
 	responses := make([]StructResponse, 0)
 	runningSubProtocols := make([]*SubBlsFtCosi, 0)
 
