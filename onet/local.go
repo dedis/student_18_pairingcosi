@@ -13,6 +13,9 @@ import (
 	"github.com/dedis/kyber/util/key"
 	"github.com/dedis/onet/log"
 	"github.com/dedis/onet/network"
+	"github.com/dedis/kyber/sign/bls"
+	"github.com/dedis/kyber/util/random"
+	"github.com/dedis/kyber/pairing"
 )
 
 // LocalTest represents all that is needed for a local test-run
@@ -32,7 +35,7 @@ type LocalTest struct {
 	// the context for the local connections
 	// it enables to have multiple local test running simultaneously
 	ctx   *network.LocalManager
-	Suite network.Suite
+	Suite pairing.Suite
 	path  string
 	// Once closed is set, do not allow further operations on it,
 	// since now the temp directory is gone.
@@ -49,7 +52,7 @@ const (
 
 // NewLocalTest creates a new Local handler that can be used to test protocols
 // locally
-func NewLocalTest(s network.Suite) *LocalTest {
+func NewLocalTest(s pairing.Suite) *LocalTest {
 	dir, err := ioutil.TempDir("", "onet")
 	if err != nil {
 		log.Fatal("could not create temp directory: ", err)
@@ -70,7 +73,7 @@ func NewLocalTest(s network.Suite) *LocalTest {
 
 // NewTCPTest returns a LocalTest but using a TCPRouter as the underlying
 // communication layer.
-func NewTCPTest(s network.Suite) *LocalTest {
+func NewTCPTest(s pairing.Suite) *LocalTest {
 	t := NewLocalTest(s)
 	t.mode = TCP
 	return t
@@ -320,7 +323,7 @@ func (l *LocalTest) GetServices(servers []*Server, sid ServiceID) []Service {
 
 // MakeSRS creates and returns nbr Servers, the associated Roster and the
 // Service object of the first server in the list having sid as a ServiceID.
-func (l *LocalTest) MakeSRS(s network.Suite, nbr int, sid ServiceID) ([]*Server, *Roster, Service) {
+func (l *LocalTest) MakeSRS(s pairing.Suite, nbr int, sid ServiceID) ([]*Server, *Roster, Service) {
 	l.panicClosed()
 	servers := l.GenServers(nbr)
 	el := l.GenRosterFromHost(servers...)
@@ -334,6 +337,17 @@ func NewPrivIdentity(suite network.Suite, port int) (kyber.Scalar, *network.Serv
 	kp := key.NewKeyPair(suite)
 	id := network.NewServerIdentity(kp.Public, address)
 	return kp.Private, id
+}
+
+// Added for testing BLS, copied and modified from function above
+// NewPrivIdentity returns a BLS secret + ServerIdentity. The SI will have
+// "localserver:+port as first address.
+func NewPrivIdentity(suite pairing.Suite, port int) (kyber.Scalar, *network.ServerIdentity) {
+	address := network.NewLocalAddress("127.0.0.1:" + strconv.Itoa(port))
+	priv_key, pub_key := bls.NewKeyPair(suite, random.New())
+
+	id := network.NewServerIdentity(pub_key, address)
+	return priv_key, id
 }
 
 // NewTCPServer creates a new server with a tcpRouter with "localhost:"+port as an
