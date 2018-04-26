@@ -10,6 +10,7 @@ import (
 	"github.com/dedis/kyber"
 	"github.com/dedis/kyber/sign/cosi"
 	"github.com/dedis/onet/log"
+	"github.com/dedis/kyber/pairing"
 )
 
 
@@ -43,6 +44,7 @@ type BlsFtCosi struct {
 	subProtocolName string
 	verificationFn  VerificationFn
 	suite cosi.Suite
+	pairingSuite pairing.Suite
 }
 
 
@@ -153,12 +155,31 @@ func (p *BlsFtCosi) Dispatch() error {
 	log.Lvl3(p.ServerIdentity().Address, "all sub protocols started")
 
 	// Wait and collect all the signatures
-	//signatures, runningSubProtocols, err := p.collectSignatures(trees, cosiSubProtocols)
-	//if err != nil {
-	//	return err
-	//}
+	signatures, runningSubProtocols, err := p.collectSignatures(trees, cosiSubProtocols)
+	if err != nil {
+		return err
+	}
 
 	// aggregate signatures and send back to client that requested it
+
+	//////////////////////////////////////////////////////////
+	// generate root signature response
+	response, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, responses, p.Msg, ok)
+	if err != nil {
+		return err
+	}
+
+	// Aggregate all and send to client
+	log.Lvl3(p.ServerIdentity().Address, "Creating final signature")
+	var signature []byte
+	signature, err = cosi.Sign(p.suite, commitment, response, finalMask)
+	if err != nil {
+		return err
+	}
+	p.FinalSignature <- signature
+
+	log.Lvl3("Root-node is done without errors")
+	//////////////////////////////////////////////////////////
 
 
 	// TODO
@@ -169,11 +190,78 @@ func (p *BlsFtCosi) Dispatch() error {
 // The collected signatures are already aggregated for a particular group
 func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*SubBlsFtCosi) ([]StructResponse, []*SubBlsFtCosi, error) {
 
-	//var mut sync.Mutex
-	//var wg sync.WaitGroup
-	//errChan := make(chan error, len(cosiSubProtocols))
+	var mut sync.Mutex
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(cosiSubProtocols))
 	responses := make([]StructResponse, 0)
 	runningSubProtocols := make([]*SubBlsFtCosi, 0)
+
+
+	/////
+
+	for i, subProtocol := range cosiSubProtocols {
+		wg.Add(1)
+		go func(i int, subProtocol *SubBlsFtCosi) {
+			defer wg.Done()
+			for {
+				select {
+				case <-subProtocol.subleaderNotResponding: // TODO need to modify not reponsing step?
+					subleaderID := trees[i].Root.Children[0].RosterIndex
+					log.Lvlf2("subleader from tree %d (id %d) failed, restarting it", i, subleaderID)
+
+					// send stop signal
+					subProtocol.HandleStop(StructStop{subProtocol.TreeNode(), Stop{}})
+
+					// generate new tree
+					newSubleaderID := subleaderID + 1
+					if newSubleaderID >= len(trees[i].Roster.List) {
+						log.Lvl2("subprotocol", i, "failed with every subleader, ignoring this subtree")
+						return
+					}
+					var err error
+					trees[i], err = genSubtree(trees[i].Roster, newSubleaderID)
+					if err != nil {
+						errChan <- fmt.Errorf("(node %v) %v", i, err)
+						return
+					}
+
+					// restart subprotocol
+					subProtocol, err = p.startSubProtocol(trees[i])
+					if err != nil {
+						err = fmt.Errorf("(node %v) error in restarting of subprotocol: %s", i, err)
+						errChan <- err
+						return
+					}
+					mut.Lock()
+					cosiSubProtocols[i] = subProtocol
+					mut.Unlock()
+				case response := <-subProtocol.subResponse:
+					mut.Lock()
+					runningSubProtocols = append(runningSubProtocols, subProtocol)
+					responses = append(responses, response)
+					mut.Unlock()
+					return
+				case <-time.After(p.Timeout):
+					err := fmt.Errorf("(node %v) didn't get response after timeout %v", i, p.Timeout)
+					errChan <- err
+					return
+				}
+			}
+		}(i, subProtocol)
+	}
+	wg.Wait()
+
+	close(errChan)
+	var errs []error
+	for err := range errChan {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		return nil, nil, fmt.Errorf("failed to collect responses with errors %v", errs)
+	}
+
+	///////////////////
 
 	return responses, runningSubProtocols, nil
 }
