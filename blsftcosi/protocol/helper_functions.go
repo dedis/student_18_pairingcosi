@@ -4,18 +4,17 @@ import (
 	"fmt"
 
 	"github.com/dedis/kyber"
-	"github.com/dedis/kyber/sign/cosi"
 	"github.com/dedis/onet"
 	"github.com/dedis/kyber/sign/bls"
 	"github.com/dedis/kyber/pairing"
-	//"github.com/dedis/onet/log"
+	"github.com/dedis/onet/log"
 	//"github.com/dedis/onet/network"
 )
 
 
-// Compute the signature of this node and aggregates with al other signatures (in structResponses)
+// Sign the message with this node and aggregates with all child signatures (in structResponses)
 func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, structResponses []StructResponse,
-	msg []byte, ok bool) (kyber.Scalar, error) {
+	msg []byte, ok bool) (kyber.Point, error) {
 
 	if t == nil {
 		return nil, fmt.Errorf("TreeNodeInstance should not be nil, but is")
@@ -26,29 +25,49 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, structRespons
 	}
 
 	// extract lists of responses
-	var responses []kyber.Scalar
+	var signatures []kyber.Point
 	for _, c := range structResponses {
-		responses = append(responses, c.CoSiReponse)
+		signatures = append(signatures, c.CoSiReponse)
 	}
 
-	// generate personal signature; returns a []byte
-	personalSignature, err := bls.Sign(ps, t.Private(), msg)
+	// generate personal signature and append to other sigs
+	personalSig, err := bls.Sign(ps, t.Private(), msg)
 	if err != nil {
 			return nil, err
 	}
-	// TODO set to null value if not ok
-	//if !ok {
-	//	personalSignature = s.Scalar().Zero()
-	//}
+	personalPointSig, err := signedByteSliceToPoint(ps, personalSig)
+	if !ok {
+		personalPointSig = ps.G1().Point()
+	}
 
-	return 
+	signatures = append(signatures, personalPointSig)
+
+	// Aggregate all signatures
+	aggSignature, err := aggregateSignatures(ps, signatures)
+	if err != nil {
+		log.Lvl3(t.ServerIdentity().Address, "failed to create aggregate signature")
+		return nil, err
+	}
+	
+	log.Lvl3(t.ServerIdentity().Address, "is done aggregating signatures with total of", len(signatures), "signatures")
+
+	return aggSignature, nil
+}
+
+func signedByteSliceToPoint(ps pairing.Suite, sig []byte) (kyber.Point, error) {
+	pointSig := ps.G1().Point()
+	if err := pointSig.UnmarshalBinary(sig); err != nil {
+		return nil, err
+	}
+
+	return pointSig, nil
 }
 
 // AggregateResponses returns the sum of given responses.
 // TODO add mask data?
-func AggregateSignatures(suite Suite, signatures []kyber.Point) (kyber.Point, error) {
+func aggregateSignatures(suite pairing.Suite, signatures []kyber.Point) (kyber.Point, error) {
 	if signatures == nil {
-		return nil, errors.New("no signatures provided")
+		return nil, fmt.Errorf("no signatures provided")
 	}
 	r := suite.G1().Point()
 	for _, signature := range signatures {
