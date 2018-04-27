@@ -13,6 +13,7 @@ import (
 )
 
 
+// Compute the signature of this node and aggregates with al other signatures (in structResponses)
 func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, structResponses []StructResponse,
 	msg []byte, ok bool) (kyber.Scalar, error) {
 

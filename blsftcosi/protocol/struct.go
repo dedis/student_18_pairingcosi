@@ -53,7 +53,7 @@ type StructChallenge struct {
 
 // Response is the ftcosi response message
 type Response struct {
-	CoSiReponse kyber.Scalar
+	CoSiReponse kyber.Point
 }
 
 // StructResponse just contains Response and the data necessary to identify and
