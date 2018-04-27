@@ -162,9 +162,12 @@ func (p *BlsFtCosi) Dispatch() error {
 
 	// aggregate signatures and send back to client that requested it
 
+
+	ok := true
+
 	//////////////////////////////////////////////////////////
 	// generate root signature response
-	response, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, responses, p.Msg, ok)
+	response, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, signatures, p.Msg, ok)
 	if err != nil {
 		return err
 	}
@@ -172,11 +175,11 @@ func (p *BlsFtCosi) Dispatch() error {
 	// Aggregate all and send to client
 	log.Lvl3(p.ServerIdentity().Address, "Creating final signature")
 	var signature []byte
-	signature, err = cosi.Sign(p.suite, commitment, response, finalMask)
+	//signature, err = cosi.Sign(p.suite, commitment, response, finalMask)
 	if err != nil {
 		return err
 	}
-	p.FinalSignature <- signature
+	//p.FinalSignature <- signature
 
 	log.Lvl3("Root-node is done without errors")
 	//////////////////////////////////////////////////////////

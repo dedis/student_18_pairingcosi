@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"fmt"
 
 	"github.com/dedis/kyber"
 	"github.com/dedis/kyber/sign/cosi"
@@ -19,10 +20,8 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, structRespons
 		return nil, fmt.Errorf("TreeNodeInstance should not be nil, but is")
 	} else if structResponses == nil {
 		return nil, fmt.Errorf("StructResponse should not be nil, but is")
-	} else if secret == nil {
-		return nil, fmt.Errorf("secret should not be nil, but is")
-	} else if challenge == nil {
-		return nil, fmt.Errorf("challenge should not be nil, but is")
+	} else if msg == nil {
+		return nil, fmt.Errorf("msg should not be nil, but is")
 	}
 
 	// extract lists of responses
@@ -31,9 +30,28 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, structRespons
 		responses = append(responses, c.CoSiReponse)
 	}
 
-	// generate personal signature
-	bls.Sign(ps, t.Private(), msg)
-
+	// generate personal signature; returns a []byte
+	personalSignature, err := bls.Sign(ps, t.Private(), msg)
+	if err != nil {
+			return nil, err
+	}
+	// TODO set to null value if not ok
+	//if !ok {
+	//	personalSignature = s.Scalar().Zero()
+	//}
 
 	return 
+}
+
+// AggregateResponses returns the sum of given responses.
+// TODO add mask data?
+func AggregateSignatures(suite Suite, signatures []kyber.Point) (kyber.Point, error) {
+	if signatures == nil {
+		return nil, errors.New("no signatures provided")
+	}
+	r := suite.G1().Point()
+	for _, signature := range signatures {
+		r = r.Add(r, signature)
+	}
+	return r, nil
 }
