@@ -3,7 +3,7 @@ package protocol
 
 import (
 	"errors"
-//	"fmt"
+	"fmt"
 	"sync"
 	"time"
 
@@ -113,12 +113,12 @@ func (p *SubBlsFtCosi) Dispatch() error {
 	p.Data = challenge.Data
 	p.Publics = challenge.Publics
 	p.Timeout = challenge.Timeout
-	var err error
+	//var err error
 
 	// TODO don't understand this
-	if errs := p.Multicast(&challenge.Challenge, committedChildren...); len(errs) > 0 {
-		log.Lvl3(p.ServerIdentity().Address, "")
-	}
+	//if errs := p.Multicast(&challenge.Challenge, committedChildren...); len(errs) > 0 {
+	//	log.Lvl3(p.ServerIdentity().Address, "")
+	//}
 
 	// Timeout is shorter than root protocol because itself waits on this
 	t := time.After(p.Timeout / 2)
@@ -129,7 +129,7 @@ loop:
 	// note that this section will not execute if it's on a leaf
 	for range p.Children() {
 		select {
-			response, channelOpen := <-p.ChannelResponse
+			case response, channelOpen := <-p.ChannelResponse:
 			if !channelOpen {
 				return nil
 			}
