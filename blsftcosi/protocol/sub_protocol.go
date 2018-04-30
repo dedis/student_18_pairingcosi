@@ -36,8 +36,8 @@ type SubBlsFtCosi struct {
 	subResponse            chan StructResponse
 
 	// internodes channels
-	ChannelChallenge    chan StructChallenge
-	ChannelResponse     chan StructResponse
+	ChannelAnnouncement   chan StructAnnouncement
+	ChannelResponse       chan StructResponse
 }
 
 
@@ -68,7 +68,7 @@ func NewSubBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, pairingSuite p
 	}
 
 	for _, channel := range []interface{}{
-		&c.ChannelChallenge,
+		&c.ChannelAnnouncement,
 		&c.ChannelResponse,
 	} {
 		err := c.RegisterChannel(channel)
@@ -89,7 +89,7 @@ func NewSubBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, pairingSuite p
 // Shutdown stops the protocol
 func (p *SubBlsFtCosi) Shutdown() error {
 	p.stoppedOnce.Do(func() {
-		close(p.ChannelChallenge)
+		close(p.ChannelAnnouncement)
 		close(p.ChannelResponse)
 	})
 	return nil
@@ -102,17 +102,17 @@ func (p *SubBlsFtCosi) Dispatch() error {
 	// TODO verification of Data
 
 
-	// ----- Challenge -----
-	challenge, channelOpen := <-p.ChannelChallenge // From
+	// ----- announcement -----
+	announcement, channelOpen := <-p.ChannelAnnouncement // From
 	if !channelOpen {
 		return nil
 	}
 
-	log.Lvl3(p.ServerIdentity().Address, "received 'challenge' ")
-	p.Msg = challenge.Msg
-	p.Data = challenge.Data
-	p.Publics = challenge.Publics
-	p.Timeout = challenge.Timeout
+	log.Lvl3(p.ServerIdentity().Address, "received annoucement ")
+	p.Msg = announcement.Msg
+	p.Data = announcement.Data
+	p.Publics = announcement.Publics
+	p.Timeout = announcement.Timeout
 	//var err error
 
 	// TODO don't understand this
@@ -184,11 +184,11 @@ func (p *SubBlsFtCosi) Start() error {
 		return errors.New("unrealistic timeout")
 	}
 
-	challenge := StructChallenge{
+	annoucement := StructAnnouncement{
 		p.TreeNode(),
-		Challenge{p.Msg, p.Data, p.Publics, p.Timeout},
+		Announcement{p.Msg, p.Data, p.Publics, p.Timeout},
 	}
-	p.ChannelChallenge <- challenge
+	p.ChannelAnnouncement <- annoucement
 	return nil
 }
 

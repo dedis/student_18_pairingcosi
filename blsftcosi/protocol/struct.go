@@ -34,20 +34,19 @@ func (m *blsftCosiSuite) RandomStream() cipher.Stream {
 	return m.r
 }
 
-// Challenge is the ftcosi challenge message
-type Challenge struct {
+// Announcement is the ftcosi annoucement message
+type Announcement struct {
 	Msg []byte // statement to be signed
 	Data []byte
 	Publics []kyber.Point
-	//CoSiChallenge kyber.Scalar
 	Timeout time.Duration
 }
 
-// StructChallenge just contains Challenge and the data necessary to identify and
+// StructAnnouncement just contains Announcement and the data necessary to identify and
 // process the message in the onet framework.
-type StructChallenge struct {
+type StructAnnouncement struct {
 	*onet.TreeNode
-	Challenge
+	Announcement
 }
 
 

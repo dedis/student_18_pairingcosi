@@ -21,7 +21,7 @@ type VerificationFn func(msg []byte, data []byte) bool
 // init is done at startup. It defines every messages that is handled by the network
 // and registers the protocols.
 func init() {
-	network.RegisterMessages(Challenge{}, Response{}, Stop{})
+	network.RegisterMessages(Announcement{}, Response{}, Stop{})
 }
 
 
