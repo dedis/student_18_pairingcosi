@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dedis/cothority"
 	"github.com/dedis/kyber"
-	"github.com/dedis/kyber/sign/cosi"
 	"github.com/dedis/onet"
 	"github.com/dedis/onet/log"
+	"github.com/dedis/kyber/pairing"
+	"github.com/dedis/kyber/pairing/bn256"
 )
 
 // sub_protocol is run by each sub-leader and each node once, and n times by 
@@ -28,7 +28,7 @@ type SubBlsFtCosi struct {
 	Timeout        time.Duration
 	stoppedOnce    sync.Once
 	verificationFn VerificationFn
-	suite          cosi.Suite
+	pairingSuite   pairing.Suite
 
 	// protocol/subprotocol channels
 	// these are used to communicate between the subprotocol and the main protocol
@@ -49,17 +49,17 @@ func init() {
 // with an always-true verification.
 func NewDefaultSubProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 	vf := func(a, b []byte) bool { return true }
-	return NewSubBlsFtCosi(n, vf, cothority.Suite)
+	return NewSubBlsFtCosi(n, vf, bn256.NewSuite())
 }
 
 // NewSubFtCosi is used to define the subprotocol and to register
 // the channels where the messages will be received.
-func NewSubBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, suite cosi.Suite) (onet.ProtocolInstance, error) {
+func NewSubBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, pairingSuite pairing.Suite) (onet.ProtocolInstance, error) {
 
 	c := &SubBlsFtCosi{
 		TreeNodeInstance: n,
 		verificationFn:   vf,
-		suite:            suite,
+		pairingSuite:     pairingSuite,
 	}
 
 	if n.IsRoot() {
