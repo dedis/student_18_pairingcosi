@@ -64,7 +64,6 @@ func NewSubBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, pairingSuite p
 
 	if n.IsRoot() {
 		c.subleaderNotResponding = make(chan bool)
-		//c.subCommitment = make(chan StructCommitment)
 		c.subResponse = make(chan StructResponse)
 	}
 
@@ -98,7 +97,71 @@ func (p *SubBlsFtCosi) Shutdown() error {
 
 // Dispatch is the main method of the subprotocol, running on each node and handling the messages in order
 func (p *SubBlsFtCosi) Dispatch() error {
+	defer p.Done()
+
+	// TODO verification of Data
+
+
+	// ----- Challenge -----
+	challenge, channelOpen := <-p.ChannelChallenge // From
+	if !channelOpen {
+		return nil
+	}
+
+	log.Lvl3(p.ServerIdentity().Address, "received 'challenge' ")
+	p.Msg = challenge.Msg
+	p.Data = challenge.Data
+	p.Publics = challenge.Publics
+	p.Timeout = challenge.Timeout
+	var err error
+
+	// TODO don't understand this
+	if errs := p.Multicast(&challenge.Challenge, committedChildren...); len(errs) > 0 {
+		log.Lvl3(p.ServerIdentity().Address, "")
+	}
+
+	// Timeout is shorter than root protocol because itself waits on this
+	t := time.After(p.Timeout / 2)
+
+	// Collect all responses from children, store them and wait till all have responded or timed out.
+	responses := make([]StructResponse, 0)
+loop:
+	// note that this section will not execute if it's on a leaf
+	for range p.Children() {
+		select {
+			response, channelOpen := <-p.ChannelResponse
+			if !channelOpen {
+				return nil
+			}
+			responses = append(responses, response)
+		case <-t:
+			break loop
+		}
+	}
+
 	// TODO
+	ok := true
+
+	if p.IsRoot() {
+		// send response to super-protocol
+		if len(responses) != 1 {
+			return fmt.Errorf(
+				"root node in subprotocol should have received 1 signature response, but received %v",
+				len(responses))
+		}
+		p.subResponse <- responses[0]
+	} else {
+		// Generate own signature and aggregate with all children signatures
+		signaturePoint, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, responses, p.Msg, ok)
+		if err != nil {
+			return err
+		}
+		err = p.SendToParent(&Response{signaturePoint})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
