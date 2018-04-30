@@ -3,7 +3,7 @@ package protocol
 
 import (
 	"crypto/cipher"
-	"github.com/dedis/kyber/sign/cosi"
+	"github.com/dedis/kyber/pairing"
 	"fmt"
 	"crypto/sha512"
 	"hash"
@@ -22,12 +22,12 @@ const DefaultProtocolName = "blsftCoSiProtoDefault"
 const DefaultSubProtocolName = "blsftSubCoSiProtoDefault"
 
 type blsftCosiSuite struct {
-	cosi.Suite
+	pairing.Suite
 	r cipher.Stream
 }
 
 func (m *blsftCosiSuite) Hash() hash.Hash {
-	return sha512.New()
+	return sha512.New() // TODO change hash?
 }
 
 func (m *blsftCosiSuite) RandomStream() cipher.Stream {
