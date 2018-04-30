@@ -17,6 +17,30 @@ import (
 // sub_protocol is run by each sub-leader and each node once, and n times by 
 // the root leader, where n is the number of sub-leader.
 
+
+// SubFtCosi holds the different channels used to receive the different protocol messages.
+type SubBlsFtCosi struct {
+	*onet.TreeNodeInstance
+	Publics        []kyber.Point
+	Msg            []byte
+	Data           []byte
+	
+	Timeout        time.Duration
+	stoppedOnce    sync.Once
+	verificationFn VerificationFn
+	suite          cosi.Suite
+
+	// protocol/subprotocol channels
+	// these are used to communicate between the subprotocol and the main protocol
+	subleaderNotResponding chan bool
+	subResponse            chan StructResponse
+
+	// internodes channels
+	ChannelChallenge    chan StructChallenge
+	ChannelResponse     chan StructResponse
+}
+
+
 func init() {
 	GlobalRegisterDefaultProtocols()
 }
@@ -60,27 +84,7 @@ func NewSubBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, suite cosi.Sui
 	return c, nil
 }
 
-// SubFtCosi holds the different channels used to receive the different protocol messages.
-type SubBlsFtCosi struct {
-	*onet.TreeNodeInstance
-	Publics        []kyber.Point
-	Msg            []byte
-	Data           []byte
-	
-	Timeout        time.Duration
-	stoppedOnce    sync.Once
-	verificationFn VerificationFn
-	suite          cosi.Suite
 
-	// protocol/subprotocol channels
-	// these are used to communicate between the subprotocol and the main protocol
-	subleaderNotResponding chan bool
-	subResponse            chan StructResponse
-
-	// internodes channels
-	ChannelChallenge    chan StructChallenge
-	ChannelResponse     chan StructResponse
-}
 
 
 // Shutdown stops the protocol

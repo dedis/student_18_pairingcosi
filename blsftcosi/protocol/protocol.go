@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"sync"
 	"time"
-	"github.com/dedis/cothority"
 	"github.com/dedis/onet/network"
 	"github.com/dedis/onet"
 	"github.com/dedis/kyber"
-	"github.com/dedis/kyber/sign/cosi"
 	"github.com/dedis/onet/log"
 	"github.com/dedis/kyber/pairing"
+	"github.com/dedis/kyber/pairing/bn256"
 )
 
 
@@ -43,7 +42,6 @@ type BlsFtCosi struct {
 	startChan       chan bool
 	subProtocolName string
 	verificationFn  VerificationFn
-	suite cosi.Suite
 	pairingSuite pairing.Suite
 }
 
@@ -55,7 +53,7 @@ type CreateProtocolFunction func(name string, t *onet.Tree) (onet.ProtocolInstan
 
 // NewFtCosi method is used to define the ftcosi protocol.
 // Called by NewDefaultProtocol
-func NewBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, subProtocolName string, suite cosi.Suite) (onet.ProtocolInstance, error) {
+func NewBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, subProtocolName string, pairingSuite pairing.Suite) (onet.ProtocolInstance, error) {
 
 	var list []kyber.Point
 	for _, t := range n.Tree().List() {
@@ -70,7 +68,7 @@ func NewBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, subProtocolName s
 		startChan:        make(chan bool, 1),
 		verificationFn:   vf,
 		subProtocolName:  subProtocolName,
-		suite:            suite,
+		pairingSuite:     pairingSuite,
 	}
 
 	return c, nil
@@ -83,7 +81,7 @@ func NewBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, subProtocolName s
 // Called by GlobalRegisterDefaultProtocols
 func NewDefaultProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 	vf := func(a, b []byte) bool { return true }
-	return NewBlsFtCosi(n, vf, DefaultSubProtocolName, cothority.Suite)
+	return NewBlsFtCosi(n, vf, DefaultSubProtocolName, bn256.NewSuite())
 }
 
 

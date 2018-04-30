@@ -8,7 +8,6 @@ import (
 	"github.com/dedis/kyber/sign/bls"
 	"github.com/dedis/kyber/pairing"
 	"github.com/dedis/onet/log"
-	//"github.com/dedis/onet/network"
 )
 
 
