@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/dedis/kyber"
-	"github.com/dedis/kyber/util/key"
+	//"github.com/dedis/kyber/util/key"
 	"github.com/dedis/onet/log"
 	"github.com/dedis/onet/network"
 	"github.com/dedis/kyber/sign/bls"

@@ -271,10 +271,11 @@ func (p *BlsFtCosi) Start() error {
 		close(p.startChan)
 		return fmt.Errorf("no proposal msg specified")
 	}
-	if p.CreateProtocol == nil {
-		close(p.startChan)
-		return fmt.Errorf("no create protocol function specified")
-	}
+	// TODO compile says always False
+	//if p.CreateProtocol == nil {
+	//	close(p.startChan)
+	//	return fmt.Errorf("no create protocol function specified")
+	//}
 	if p.verificationFn == nil {
 		close(p.startChan)
 		return fmt.Errorf("verification function cannot be nil")
