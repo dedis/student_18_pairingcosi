@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	bolt "github.com/coreos/bbolt"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/network"
 )
 
 // Context represents the methods that are available to a service.

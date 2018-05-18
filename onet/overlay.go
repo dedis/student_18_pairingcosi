@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/log"
+	"bls-ftcosi/onet/network"
 	"gopkg.in/satori/go.uuid.v1"
 )
 

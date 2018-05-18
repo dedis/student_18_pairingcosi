@@ -9,14 +9,28 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dedis/kyber"
 	//"github.com/dedis/kyber/util/key"
-	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/log"
+	"bls-ftcosi/onet/network"
+	"github.com/dedis/kyber"
 	"github.com/dedis/kyber/sign/bls"
 	"github.com/dedis/kyber/util/random"
 	"github.com/dedis/kyber/pairing"
+
 )
+
+type NetworkSuite struct {
+    kyber.Group
+    pairing.Suite
+}
+
+
+func NewNetworkSuite(pairingSuite pairing.Suite) *NetworkSuite {
+    return &NetworkSuite{
+        Group: pairingSuite.G2(),
+        Suite: pairingSuite,
+    }
+}
 
 // LocalTest represents all that is needed for a local test-run
 type LocalTest struct {
@@ -35,7 +49,7 @@ type LocalTest struct {
 	// the context for the local connections
 	// it enables to have multiple local test running simultaneously
 	ctx   *network.LocalManager
-	Suite pairing.Suite
+	Suite NetworkSuite
 	path  string
 	// Once closed is set, do not allow further operations on it,
 	// since now the temp directory is gone.
@@ -52,7 +66,7 @@ const (
 
 // NewLocalTest creates a new Local handler that can be used to test protocols
 // locally
-func NewLocalTest(s pairing.Suite) *LocalTest {
+func NewLocalTest(s NetworkSuite) *LocalTest {
 	dir, err := ioutil.TempDir("", "onet")
 	if err != nil {
 		log.Fatal("could not create temp directory: ", err)
@@ -73,7 +87,7 @@ func NewLocalTest(s pairing.Suite) *LocalTest {
 
 // NewTCPTest returns a LocalTest but using a TCPRouter as the underlying
 // communication layer.
-func NewTCPTest(s pairing.Suite) *LocalTest {
+func NewTCPTest(s NetworkSuite) *LocalTest {
 	t := NewLocalTest(s)
 	t.mode = TCP
 	return t
@@ -323,7 +337,7 @@ func (l *LocalTest) GetServices(servers []*Server, sid ServiceID) []Service {
 
 // MakeSRS creates and returns nbr Servers, the associated Roster and the
 // Service object of the first server in the list having sid as a ServiceID.
-func (l *LocalTest) MakeSRS(s pairing.Suite, nbr int, sid ServiceID) ([]*Server, *Roster, Service) {
+func (l *LocalTest) MakeSRS(s network.Suite, nbr int, sid ServiceID) ([]*Server, *Roster, Service) {
 	l.panicClosed()
 	servers := l.GenServers(nbr)
 	el := l.GenRosterFromHost(servers...)
@@ -343,7 +357,7 @@ func NewPrivIdentity(suite pairing.Suite, port int) (kyber.Scalar, *network.Serv
 
 // NewTCPServer creates a new server with a tcpRouter with "localhost:"+port as an
 // address.
-func newTCPServer(s pairing.Suite, port int, path string) *Server {
+func newTCPServer(s NetworkSuite, port int, path string) *Server {
 	priv, id := NewPrivIdentity(s, port)
 	addr := network.NewTCPAddress(id.Address.NetworkAddress())
 	id2 := network.NewServerIdentity(id.Public, addr)
@@ -386,7 +400,7 @@ func newTCPServer(s pairing.Suite, port int, path string) *Server {
 // NewLocalServer returns a new server using a LocalRouter (channels) to communicate.
 // At the return of this function, the router is already Run()ing in a go
 // routine.
-func NewLocalServer(s pairing.Suite, port int) *Server {
+func NewLocalServer(s NetworkSuite, port int) *Server {
 	dir, err := ioutil.TempDir("", "example")
 	if err != nil {
 		log.Fatal(err)
@@ -431,7 +445,7 @@ func (l *LocalTest) genLocalHosts(n int) []*Server {
 // NewServer returns a new server which type is determined by the local mode:
 // TCP or Local. If it's TCP, then an available port is used, otherwise, the
 // port given in argument is used.
-func (l *LocalTest) NewServer(s pairing.Suite, port int) *Server {
+func (l *LocalTest) NewServer(s NetworkSuite, port int) *Server {
 	l.panicClosed()
 	var server *Server
 	switch l.mode {
@@ -444,7 +458,7 @@ func (l *LocalTest) NewServer(s pairing.Suite, port int) *Server {
 }
 
 // NewTCPServer returns a new TCP Server attached to this LocalTest.
-func (l *LocalTest) newTCPServer(s pairing.Suite) *Server {
+func (l *LocalTest) newTCPServer(s NetworkSuite) *Server {
 	l.panicClosed()
 	server := newTCPServer(s, 0, l.path)
 	l.Servers[server.ServerIdentity.ID] = server
@@ -456,7 +470,7 @@ func (l *LocalTest) newTCPServer(s pairing.Suite) *Server {
 
 // NewLocalServer returns a fresh Host using local connections within the context
 // of this LocalTest
-func (l *LocalTest) NewLocalServer(s pairing.Suite, port int) *Server {
+func (l *LocalTest) NewLocalServer(s NetworkSuite, port int) *Server {
 	l.panicClosed()
 	priv, id := NewPrivIdentity(s, port)
 	localRouter, err := network.NewLocalRouterWithManager(l.ctx, id, s)

@@ -3,7 +3,7 @@ package onet
 import (
 	"testing"
 
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 // To avoid setting up testing-verbosity in all tests

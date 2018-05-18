@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 	"github.com/stretchr/testify/require"
 )
 

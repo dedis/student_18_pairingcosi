@@ -9,7 +9,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 var in *bufio.Reader

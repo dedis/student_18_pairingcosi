@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/dedis/kyber"
-	"github.com/dedis/onet/cfgpath"
-	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/cfgpath"
+	"bls-ftcosi/onet/log"
+	"bls-ftcosi/onet/network"
 	"rsc.io/goversion/version"
 )
 

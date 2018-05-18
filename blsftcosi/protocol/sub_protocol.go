@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/dedis/kyber"
-	"github.com/dedis/onet"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet"
+	"bls-ftcosi/onet/log"
 	"github.com/dedis/kyber/pairing"
 	"github.com/dedis/kyber/pairing/bn256"
 )
@@ -152,7 +152,7 @@ loop:
 		p.subResponse <- responses[0]
 	} else {
 		// Generate own signature and aggregate with all children signatures
-		signaturePoint, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, responses, p.Msg, ok)
+		signaturePoint, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.Publics, responses, p.Msg, ok)
 		if err != nil {
 			return err
 		}

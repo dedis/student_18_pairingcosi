@@ -9,8 +9,8 @@ protocol, as in Test Driven Development.
 import (
 	"testing"
 
-	"github.com/dedis/onet"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet"
+	"bls-ftcosi/onet/network"
 )
 
 // tests the root of the trees

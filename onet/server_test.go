@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/coreos/bbolt"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/satori/go.uuid.v1"
 )

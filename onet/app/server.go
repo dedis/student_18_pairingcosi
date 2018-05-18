@@ -14,9 +14,9 @@ import (
 
 	"github.com/dedis/kyber/util/encoding"
 	"github.com/dedis/kyber/util/key"
-	"github.com/dedis/onet/cfgpath"
-	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/cfgpath"
+	"bls-ftcosi/onet/log"
+	"bls-ftcosi/onet/network"
 )
 
 // DefaultServerConfig is the default server configuration file-name.

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 // a connection will return an io.EOF after readTimeout if nothing has been

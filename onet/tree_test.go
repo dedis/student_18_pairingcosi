@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/dedis/kyber/util/key"
-	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/log"
+	"bls-ftcosi/onet/network"
 	"github.com/stretchr/testify/assert"
 )
 

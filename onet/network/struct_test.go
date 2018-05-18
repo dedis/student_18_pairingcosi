@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/dedis/kyber/util/key"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 func TestServerIdentity(t *testing.T) {

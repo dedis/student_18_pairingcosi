@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"sync"
 	"time"
-	"github.com/dedis/onet/network"
-	"github.com/dedis/onet"
+	"bls-ftcosi/onet/network"
+	"bls-ftcosi/onet"
 	"github.com/dedis/kyber"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 	"github.com/dedis/kyber/pairing"
 	"github.com/dedis/kyber/pairing/bn256"
+	
 )
 
 
@@ -33,6 +34,7 @@ type BlsFtCosi struct {
 	NSubtrees	int
 	Msg			[]byte
 	Data		[]byte
+	CreateProtocol CreateProtocolFunction
 
 	Timeout        time.Duration // sub-protocol time out
 	FinalSignature chan []byte // final signature that is sent back to client
@@ -164,7 +166,7 @@ func (p *BlsFtCosi) Dispatch() error {
 	ok := true
 
 	// generate root signature
-	signaturePoint, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, signatures, p.Msg, ok)
+	signaturePoint, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.publics, signatures, p.Msg, ok)
 	if err != nil {
 		return err
 	}

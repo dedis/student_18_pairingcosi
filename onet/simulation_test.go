@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 func TestSimulationBF(t *testing.T) {

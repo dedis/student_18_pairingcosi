@@ -64,7 +64,7 @@ func requireNil(err error) {
 		fmt.Println("err is not nil!")
 	} 
 }
-/*
+
 func main() {
 	testBLS()
 	fmt.Println("testBLS OK ")
@@ -73,4 +73,4 @@ func main() {
 	fmt.Println("testBLSAggregate OK ")
 
 }
-*/
+

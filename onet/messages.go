@@ -1,7 +1,7 @@
 package onet
 
 import (
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/network"
 	"gopkg.in/satori/go.uuid.v1"
 )
 

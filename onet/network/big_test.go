@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 /*

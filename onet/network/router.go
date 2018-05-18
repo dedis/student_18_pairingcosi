@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/dedis/kyber/util/encoding"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 // Router handles all networking operations such as:

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/dedis/kyber/suites"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 func TestInteractiveConfig(t *testing.T) {

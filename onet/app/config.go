@@ -11,9 +11,9 @@ import (
 	"github.com/dedis/kyber"
 	"github.com/dedis/kyber/suites"
 	"github.com/dedis/kyber/util/encoding"
-	"github.com/dedis/onet"
-	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet"
+	"bls-ftcosi/onet/log"
+	"bls-ftcosi/onet/network"
 )
 
 // CothorityConfig is the configuration structure of the cothority daemon.

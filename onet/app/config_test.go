@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/log"
+	"bls-ftcosi/onet/network"
 )
 
 var o bytes.Buffer

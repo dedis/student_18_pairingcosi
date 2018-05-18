@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 // WriteTomlConfig write  any structure to a toml-file

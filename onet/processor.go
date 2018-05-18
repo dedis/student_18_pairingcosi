@@ -7,8 +7,8 @@ import (
 
 	"strings"
 
-	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet/log"
+	"bls-ftcosi/onet/network"
 	"github.com/dedis/protobuf"
 )
 

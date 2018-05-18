@@ -17,7 +17,7 @@ import (
 	"github.com/dedis/kyber/sign/schnorr"
 	"github.com/dedis/kyber/util/encoding"
 	"github.com/dedis/kyber/util/random"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 // About our TLS strategy:

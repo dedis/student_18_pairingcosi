@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dedis/onet"
-	"github.com/dedis/onet/network"
+	"bls-ftcosi/onet"
+	"bls-ftcosi/onet/network"
 )
 
 // genTrees will create a given number of subtrees of the same number of nodes.

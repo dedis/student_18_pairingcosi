@@ -2,14 +2,15 @@
 package protocol
 
 import (
-	"crypto/cipher"
-	"github.com/dedis/kyber/pairing"
 	"fmt"
-	"crypto/sha512"
 	"hash"
 	"time"
+	"crypto/cipher"
+	"crypto/sha512"
+
+	"github.com/dedis/kyber/pairing"	
 	"github.com/dedis/kyber"
-	"github.com/dedis/onet"
+	"bls-ftcosi/onet"
 )
 
 // DefaultProtocolName can be used from other packages to refer to this protocol.
@@ -53,6 +54,7 @@ type StructAnnouncement struct {
 // Response is the ftcosi response message
 type Response struct {
 	CoSiReponse kyber.Point
+	Mask        []byte
 }
 
 // StructResponse just contains Response and the data necessary to identify and

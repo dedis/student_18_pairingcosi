@@ -11,13 +11,16 @@ import (
 	"github.com/dedis/kyber"
 	//"github.com/dedis/kyber/sign/cosi"
 	"bls-ftcosi/onet"
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 	//"github.com/stretchr/testify/require"
 	"github.com/dedis/kyber/pairing/bn256"
 	//"github.com/dedis/kyber/pairing"
 
 
 )
+
+
+
 
 const FailureProtocolName = "FailureProtocol"
 const FailureSubProtocolName = "FailureSubProtocol"
@@ -29,22 +32,22 @@ func init() {
 	GlobalRegisterDefaultProtocols()
 	onet.GlobalProtocolRegister(FailureProtocolName, func(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		vf := func(a, b []byte) bool { return true }
-		return NewBlsFtCosi(n, vf, FailureSubProtocolName, bn256.NewSuite())
+		return NewBlsFtCosi(n, vf, FailureSubProtocolName, testSuite)
 	})
 	onet.GlobalProtocolRegister(FailureSubProtocolName, func(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		vf := func(a, b []byte) bool { return false }
-		return NewSubBlsFtCosi(n, vf, bn256.NewSuite())
+		return NewSubBlsFtCosi(n, vf, testSuite)
 	})
 	onet.GlobalProtocolRegister(RefuseOneProtocolName, func(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		vf := func(a, b []byte) bool { return true }
-		return NewBlsFtCosi(n, vf, RefuseOneSubProtocolName, bn256.NewSuite())
+		return NewBlsFtCosi(n, vf, RefuseOneSubProtocolName, testSuite)
 	})
 	onet.GlobalProtocolRegister(RefuseOneSubProtocolName, func(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
-		return NewSubBlsFtCosi(n, refuse, bn256.NewSuite())
+		return NewSubBlsFtCosi(n, refuse, testSuite)
 	})
 }
 
-var testSuite = bn256.NewSuite()
+var testSuite = onet.NewNetworkSuite(bn256.NewSuite())
 var defaultTimeout = 5 * time.Second
 
 func TestMain(m *testing.M) {
@@ -65,7 +68,7 @@ func TestProtocol(t *testing.T) {
 		for _, nSubtrees := range subtrees {
 			log.Lvl2("test asking for", nNodes, "nodes and", nSubtrees, "subtrees")
 
-			local := onet.NewLocalTest(testSuite)
+			local := onet.NewLocalTest(*testSuite) // TODO pointer?
 			_, _, tree := local.GenTree(nNodes, false)
 
 			// get public keys

@@ -1,0 +1,177 @@
+package protocol
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/dedis/kyber"
+)
+
+// Commit returns a random scalar v, generated from the given suite,
+// and a corresponding commitment V = [v]G. If the given cipher stream is nil,
+// a random stream is used.
+func Commit(suite Suite) (v kyber.Scalar, V kyber.Point) {
+	random := suite.Scalar().Pick(suite.RandomStream())
+	commitment := suite.Point().Mul(random, nil)
+	return random, commitment
+}
+
+// AggregateCommitments returns the sum of the given commitments and the
+// bitwise OR of the corresponding masks.
+func AggregateCommitments(suite Suite, commitments []kyber.Point, masks [][]byte) (sum kyber.Point, commits []byte, err error) {
+	if len(commitments) != len(masks) {
+		return nil, nil, errors.New("mismatching lengths of commitment and mask slices")
+	}
+	aggCom := suite.Point().Null()
+	aggMask := make([]byte, len(masks[0]))
+
+	for i := range commitments {
+		aggCom = suite.Point().Add(aggCom, commitments[i])
+		aggMask, err = AggregateMasks(aggMask, masks[i])
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return aggCom, aggMask, nil
+}
+
+
+// Mask represents a cosigning participation bitmask.
+type Mask struct {
+	mask            []byte
+	publics         []kyber.Point
+	AggregatePublic kyber.Point
+}
+
+// NewMask returns a new participation bitmask for cosigning where all
+// cosigners are disabled by default. If a public key is given it verifies that
+// it is present in the list of keys and sets the corresponding index in the
+// bitmask to 1 (enabled).
+func NewMask(suite Suite, publics []kyber.Point, myKey kyber.Point) (*Mask, error) {
+	m := &Mask{
+		publics: publics,
+	}
+	m.mask = make([]byte, m.Len())
+	m.AggregatePublic = suite.Point().Null()
+	if myKey != nil {
+		found := false
+		for i, key := range publics {
+			if key.Equal(myKey) {
+				m.SetBit(i, true)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, errors.New("key not found")
+		}
+	}
+	return m, nil
+}
+
+// Mask returns a copy of the participation bitmask.
+func (m *Mask) Mask() []byte {
+	clone := make([]byte, len(m.mask))
+	copy(clone[:], m.mask)
+	return clone
+}
+
+// Len returns the mask length in bytes.
+func (m *Mask) Len() int {
+	return (len(m.publics) + 7) >> 3
+}
+
+// SetMask sets the participation bitmask according to the given byte slice
+// interpreted in little-endian order, i.e., bits 0-7 of byte 0 correspond to
+// cosigners 0-7, bits 0-7 of byte 1 correspond to cosigners 8-15, etc.
+func (m *Mask) SetMask(mask []byte) error {
+	if m.Len() != len(mask) {
+		return fmt.Errorf("mismatching mask lengths")
+	}
+	for i := range m.publics {
+		byt := i >> 3
+		msk := byte(1) << uint(i&7)
+		if ((m.mask[byt] & msk) == 0) && ((mask[byt] & msk) != 0) {
+			m.mask[byt] ^= msk // flip bit in mask from 0 to 1
+			m.AggregatePublic.Add(m.AggregatePublic, m.publics[i])
+		}
+		if ((m.mask[byt] & msk) != 0) && ((mask[byt] & msk) == 0) {
+			m.mask[byt] ^= msk // flip bit in mask from 1 to 0
+			m.AggregatePublic.Sub(m.AggregatePublic, m.publics[i])
+		}
+	}
+	return nil
+}
+
+// SetBit enables (enable: true) or disables (enable: false) the bit
+// in the participation mask of the given cosigner.
+func (m *Mask) SetBit(i int, enable bool) error {
+	if i >= len(m.publics) {
+		return errors.New("index out of range")
+	}
+	byt := i >> 3
+	msk := byte(1) << uint(i&7)
+	if ((m.mask[byt] & msk) == 0) && enable {
+		m.mask[byt] ^= msk // flip bit in mask from 0 to 1
+		m.AggregatePublic.Add(m.AggregatePublic, m.publics[i])
+	}
+	if ((m.mask[byt] & msk) != 0) && !enable {
+		m.mask[byt] ^= msk // flip bit in mask from 1 to 0
+		m.AggregatePublic.Sub(m.AggregatePublic, m.publics[i])
+	}
+	return nil
+}
+
+// IndexEnabled checks whether the given index is enabled in the mask or not.
+func (m *Mask) IndexEnabled(i int) (bool, error) {
+	if i >= len(m.publics) {
+		return false, errors.New("index out of range")
+	}
+	byt := i >> 3
+	msk := byte(1) << uint(i&7)
+	return ((m.mask[byt] & msk) != 0), nil
+}
+
+// KeyEnabled checks whether the index, corresponding to the given key, is
+// enabled in the mask or not.
+func (m *Mask) KeyEnabled(public kyber.Point) (bool, error) {
+	for i, key := range m.publics {
+		if key.Equal(public) {
+			return m.IndexEnabled(i)
+		}
+	}
+	return false, errors.New("key not found")
+}
+
+// CountEnabled returns the number of enabled nodes in the CoSi participation
+// mask.
+func (m *Mask) CountEnabled() int {
+	// hw is hamming weight
+	hw := 0
+	for i := range m.publics {
+		byt := i >> 3
+		msk := byte(1) << uint(i&7)
+		if (m.mask[byt] & msk) != 0 {
+			hw++
+		}
+	}
+	return hw
+}
+
+// CountTotal returns the total number of nodes this CoSi instance knows.
+func (m *Mask) CountTotal() int {
+	return len(m.publics)
+}
+
+// AggregateMasks computes the bitwise OR of the two given participation masks.
+func AggregateMasks(a, b []byte) ([]byte, error) {
+	if len(a) != len(b) {
+		return nil, errors.New("mismatching mask lengths")
+	}
+	m := make([]byte, len(a))
+	for i := range m {
+		m[i] = a[i] | b[i]
+	}
+	return m, nil
+}
+

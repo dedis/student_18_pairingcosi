@@ -6,7 +6,7 @@ import (
 	"path"
 	"runtime"
 
-	"github.com/dedis/onet/log"
+	"bls-ftcosi/onet/log"
 )
 
 // GetConfigPath returns the location for which the configuration files are stored.
