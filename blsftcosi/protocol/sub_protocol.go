@@ -152,11 +152,11 @@ loop:
 		p.subResponse <- responses[0]
 	} else {
 		// Generate own signature and aggregate with all children signatures
-		signaturePoint, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.Publics, responses, p.Msg, ok)
+		signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.Publics, responses, p.Msg, ok)
 		if err != nil {
 			return err
 		}
-		err = p.SendToParent(&Response{signaturePoint})
+		err = p.SendToParent(&Response{signaturePoint, finalMask.mask})
 		if err != nil {
 			return err
 		}

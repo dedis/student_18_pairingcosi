@@ -166,7 +166,7 @@ func (p *BlsFtCosi) Dispatch() error {
 	ok := true
 
 	// generate root signature
-	signaturePoint, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.publics, signatures, p.Msg, ok)
+	signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.publics, signatures, p.Msg, ok)
 	if err != nil {
 		return err
 	}
@@ -176,6 +176,7 @@ func (p *BlsFtCosi) Dispatch() error {
 		return err
 	}
 	// TODO bit mask
+	// TODO create signature with appended mask
 
 	log.Lvl3(p.ServerIdentity().Address, "Created final signature")
 

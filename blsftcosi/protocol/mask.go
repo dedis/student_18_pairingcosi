@@ -5,35 +5,10 @@ import (
 	"fmt"
 
 	"github.com/dedis/kyber"
+	"github.com/dedis/kyber/pairing"
+
 )
 
-// Commit returns a random scalar v, generated from the given suite,
-// and a corresponding commitment V = [v]G. If the given cipher stream is nil,
-// a random stream is used.
-func Commit(suite Suite) (v kyber.Scalar, V kyber.Point) {
-	random := suite.Scalar().Pick(suite.RandomStream())
-	commitment := suite.Point().Mul(random, nil)
-	return random, commitment
-}
-
-// AggregateCommitments returns the sum of the given commitments and the
-// bitwise OR of the corresponding masks.
-func AggregateCommitments(suite Suite, commitments []kyber.Point, masks [][]byte) (sum kyber.Point, commits []byte, err error) {
-	if len(commitments) != len(masks) {
-		return nil, nil, errors.New("mismatching lengths of commitment and mask slices")
-	}
-	aggCom := suite.Point().Null()
-	aggMask := make([]byte, len(masks[0]))
-
-	for i := range commitments {
-		aggCom = suite.Point().Add(aggCom, commitments[i])
-		aggMask, err = AggregateMasks(aggMask, masks[i])
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	return aggCom, aggMask, nil
-}
 
 
 // Mask represents a cosigning participation bitmask.
@@ -47,12 +22,12 @@ type Mask struct {
 // cosigners are disabled by default. If a public key is given it verifies that
 // it is present in the list of keys and sets the corresponding index in the
 // bitmask to 1 (enabled).
-func NewMask(suite Suite, publics []kyber.Point, myKey kyber.Point) (*Mask, error) {
+func NewMask(suite pairing.Suite, publics []kyber.Point, myKey kyber.Point) (*Mask, error) {
 	m := &Mask{
 		publics: publics,
 	}
 	m.mask = make([]byte, m.Len())
-	m.AggregatePublic = suite.Point().Null()
+	m.AggregatePublic = suite.G1().Point().Null()
 	if myKey != nil {
 		found := false
 		for i, key := range publics {
