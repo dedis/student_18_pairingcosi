@@ -177,10 +177,11 @@ func (p *BlsFtCosi) Dispatch() error {
 	}
 	// TODO bit mask
 	// TODO create signature with appended mask
+	finalSignature := AppendSigAndMask(signature, finalMask)
 
 	log.Lvl3(p.ServerIdentity().Address, "Created final signature")
 
-	p.FinalSignature <- signature
+	p.FinalSignature <- finalSignature
 
 	log.Lvl3("Root-node is done without errors")
 

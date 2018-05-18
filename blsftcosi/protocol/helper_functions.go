@@ -88,7 +88,7 @@ func signedByteSliceToPoint(ps pairing.Suite, sig []byte) (kyber.Point, error) {
 
 // AggregateResponses returns the sum of given responses.
 // TODO add mask data?
-func aggregateSignatures(suite pairing.Suite, signatures []kyber.Point, masks [][]byte) (kyber.Point, []byte, error) {
+func aggregateSignatures(suite pairing.Suite, signatures []kyber.Point, masks [][]byte) (sum kyber.Point, sig []byte, err error) {
 	if signatures == nil {
 		return nil, nil, fmt.Errorf("no signatures provided")
 	}
@@ -104,6 +104,6 @@ func aggregateSignatures(suite pairing.Suite, signatures []kyber.Point, masks []
 	return r, aggMask, nil
 }
 
-func appendSigAndMask(signature []byte, mask *Mask) []byte {
+func AppendSigAndMask(signature []byte, mask *Mask) ([]byte) {
 	return append(signature, mask.mask...)
 }
