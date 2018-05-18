@@ -50,7 +50,7 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 	}
 	personalPointSig, err := signedByteSliceToPoint(ps, personalSig)
 	if !ok {
-		personalPointSig = ps.G1().Point()
+		personalPointSig = ps.G2().Point()
 	}
 
 	signatures = append(signatures, personalPointSig)

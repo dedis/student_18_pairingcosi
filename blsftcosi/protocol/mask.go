@@ -27,7 +27,7 @@ func NewMask(suite pairing.Suite, publics []kyber.Point, myKey kyber.Point) (*Ma
 		publics: publics,
 	}
 	m.mask = make([]byte, m.Len())
-	m.AggregatePublic = suite.G1().Point().Null()
+	m.AggregatePublic = suite.G2().Point().Null()
 	if myKey != nil {
 		found := false
 		for i, key := range publics {
