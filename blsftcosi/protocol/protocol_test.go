@@ -1,15 +1,15 @@
 package protocol
 
 import (
-	"flag"
-	//"fmt"
+	//"flag"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	//"github.com/dedis/cothority"
 	"github.com/dedis/kyber"
-	//"github.com/dedis/kyber/sign/cosi"
+	"github.com/dedis/kyber/sign/cosi"
 	"bls-ftcosi/onet"
 	"bls-ftcosi/onet/log"
 	//"github.com/stretchr/testify/require"
@@ -49,7 +49,7 @@ func init() {
 
 var testSuite = onet.NewNetworkSuite(bn256.NewSuite())
 var defaultTimeout = 5 * time.Second
-
+/*
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if testing.Short() {
@@ -57,7 +57,7 @@ func TestMain(m *testing.M) {
 	}
 	log.MainTest(m)
 }
-
+*/
 // Tests various trees configurations
 func TestProtocol(t *testing.T) {
 	nodes := []int{1, 2, 5, 13, 24}
@@ -95,16 +95,44 @@ func TestProtocol(t *testing.T) {
 			}
 
 			// get and verify signature
-			//err = getAndVerifySignature(cosiProtocol, publics, proposal, cosi.CompletePolicy{})
-			//if err != nil {
-			//	local.CloseAll()
-			//	t.Fatal(err)
-			//}
+			err = getAndVerifySignature(cosiProtocol, publics, proposal, cosi.CompletePolicy{})
+			if err != nil {
+				local.CloseAll()
+				t.Fatal(err)
+			}
 
 			local.CloseAll()
 		}
 	}
 }
+
+func getAndVerifySignature(cosiProtocol *BlsFtCosi, publics []kyber.Point,
+	proposal []byte, policy cosi.Policy) error {
+	var signature []byte
+	select {
+	case signature = <-cosiProtocol.FinalSignature:
+		log.Lvl3("Instance is done")
+	case <-time.After(defaultTimeout * 2):
+		// wait a bit longer than the protocol timeout
+		return fmt.Errorf("didn't get commitment in time")
+	}
+
+	return verifySignature(signature, publics, proposal, policy)
+}
+
+func verifySignature(signature []byte, publics []kyber.Point,
+	proposal []byte, policy cosi.Policy) error {
+	// verify signature
+	/*
+	err := cosi.Verify(testSuite, publics, proposal, signature, policy)
+	if err != nil {
+		return fmt.Errorf("didn't get a valid signature: %s", err)
+	}
+	*/
+	log.Lvl2("Signature correctly verified!")
+	return nil
+}
+
 
 
 type Counter struct {

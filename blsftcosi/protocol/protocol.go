@@ -10,6 +10,8 @@ import (
 	"bls-ftcosi/onet/log"
 	"github.com/dedis/kyber/pairing"
 	"github.com/dedis/kyber/pairing/bn256"
+
+	"reflect"
 	
 )
 
@@ -179,9 +181,13 @@ func (p *BlsFtCosi) Dispatch() error {
 	// TODO create signature with appended mask
 	finalSignature := AppendSigAndMask(signature, finalMask)
 
+	fmt.Println("xxx 1", reflect.TypeOf(finalSignature), finalSignature)
+
 	log.Lvl3(p.ServerIdentity().Address, "Created final signature")
 
 	p.FinalSignature <- finalSignature
+
+	fmt.Println("xxx 2")
 
 	log.Lvl3("Root-node is done without errors")
 
