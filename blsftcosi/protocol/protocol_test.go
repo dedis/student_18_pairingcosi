@@ -29,6 +29,7 @@ const RefuseOneProtocolName = "RefuseOneProtocol"
 const RefuseOneSubProtocolName = "RefuseOneSubProtocol"
 
 func init() {
+	log.SetDebugVisible(3)
 	GlobalRegisterDefaultProtocols()
 	onet.GlobalProtocolRegister(FailureProtocolName, func(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		vf := func(a, b []byte) bool { return true }
@@ -123,12 +124,12 @@ func getAndVerifySignature(cosiProtocol *BlsFtCosi, publics []kyber.Point,
 func verifySignature(signature []byte, publics []kyber.Point,
 	proposal []byte, policy cosi.Policy) error {
 	// verify signature
-	/*
-	err := cosi.Verify(testSuite, publics, proposal, signature, policy)
+	
+	err := Verify(testSuite, publics, proposal, signature)
 	if err != nil {
 		return fmt.Errorf("didn't get a valid signature: %s", err)
 	}
-	*/
+	
 	log.Lvl2("Signature correctly verified!")
 	return nil
 }

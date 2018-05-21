@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"fmt"
+	"errors"
 
 	"github.com/dedis/kyber"
 	"bls-ftcosi/onet"
@@ -105,5 +106,88 @@ func aggregateSignatures(suite pairing.Suite, signatures []kyber.Point, masks []
 }
 
 func AppendSigAndMask(signature []byte, mask *Mask) ([]byte) {
+	//fmt.Println("xxx sig len", len(signature), signature)
+	//fmt.Println("xxx mask len", len(mask.mask), mask.mask)
 	return append(signature, mask.mask...)
+}
+
+// Verify checks the given cosignature on the provided message using the list
+// of public keys and cosigning policy.
+func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte) error {
+	if publics == nil {
+		return errors.New("no public keys provided")
+	}
+	if message == nil {
+		return errors.New("no message provided")
+	}
+	if sig == nil {
+		return errors.New("no signature provided")
+	}
+
+
+	lenCom := suite.G1().PointLen()
+	//fmt.Println("xxx lenCom:", lenCom)
+	//fmt.Println("xxx sig len:", len(sig))
+	signature := sig[:lenCom]
+	//fmt.Println("xxx vbuff",signature)
+	sigma := suite.G1().Point()
+	if err := sigma.UnmarshalBinary(signature); err != nil {
+		return errors.New("unmarshalling of commitment failed")
+	}
+	fmt.Println("xxx sigma", sigma)
+
+
+	// Unpack the participation mask and get the aggregate public key
+	mask, err := NewMask(suite, publics, nil)
+	if err != nil {
+		return err
+	}
+	//fmt.Println("xxx 4")
+	mask.SetMask(sig[lenCom:])
+	//fmt.Println("xxx 5", mask.mask)
+	pks := mask.AggregatePublic
+	ABuff, err := pks.MarshalBinary()
+	if err != nil {
+		return errors.New("marshalling of aggregate public key failed")
+	}
+	fmt.Println("xxx 6", ABuff)
+/*
+	// Recompute the challenge
+	hash := suite.Hash()
+	hash.Write(signature)
+	hash.Write(ABuff)
+	hash.Write(message)
+	buff := hash.Sum(nil)
+	*/
+	//k := suite.G2().Scalar().SetBytes(buff)
+
+	// k * -aggPublic + s * B = k*-pks + s*B
+	// from s = k * a + r => s * B = k * a * B + r * B <=> s*B = k*pks + r*B
+	// <=> s*B + k*-pks = r*B
+	//minusPublic := suite.G2().Point().Neg(pks)
+	//kA := suite.G2().Point().Mul(k, minusPublic)
+	//sB := suite.G2().Point().Mul(r, nil)
+	//left := suite.G2().Point().Add(kA, nil) // TODO was sB
+	fmt.Println("xxx signature", signature)
+	err = bls.Verify(suite, pks, message, signature)
+	if err != nil {
+		return fmt.Errorf("didn't get a valid signature: %s", err)
+	} else {
+		fmt.Println("OOOOOOOOOOOOOOOOO  signature verified and is correct!")
+	}
+
+	// TODO check mask
+/*
+	if !left.Equal(sigma) || !check(mask) {
+		return errors.New("invalid signature")
+	}
+	*/
+
+	return nil
+}
+
+// Check verifies that all participants have contributed to a collective
+// signature.
+func check(m *Mask) bool {
+	return m.CountEnabled() == m.CountTotal()
 }
