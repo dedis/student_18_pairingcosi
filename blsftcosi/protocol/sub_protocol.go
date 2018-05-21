@@ -210,12 +210,15 @@ loop:
 		}
 
 		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE", reflect.TypeOf(signaturePoint), signaturePoint)			
-/*
+
+		
+		// TODO if remove this, no more mal formed errors
 		err = p.SendToParent(&Response{CoSiReponse:signaturePoint, Mask:finalMask.mask})
 		if err != nil {
 			return err
 		}
-		*/
+		
+		
 	}
 
 	return nil
