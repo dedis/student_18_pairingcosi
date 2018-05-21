@@ -61,8 +61,8 @@ func TestMain(m *testing.M) {
 */
 // Tests various trees configurations
 func TestProtocol(t *testing.T) {
-	nodes := []int{1, 2, 5, 13, 24}
-	subtrees := []int{1, 2, 5, 9}
+	nodes := []int{2} // []int{1, 2, 5, 13, 24}
+	subtrees := []int{1} //  []int{1, 2, 5, 9}
 	proposal := []byte{0xFF}
 
 	for _, nNodes := range nodes {

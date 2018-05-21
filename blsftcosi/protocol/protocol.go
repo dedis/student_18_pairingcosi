@@ -154,7 +154,7 @@ func (p *BlsFtCosi) Dispatch() error {
 			return err
 		}
 	}
-	log.Lvl3(p.ServerIdentity().Address, "all sub protocols started")
+	log.Lvl3(p.ServerIdentity().Address, "all protocols started")
 
 	// Wait and collect all the signatures
 	signatures, runningSubProtocols, err := p.collectSignatures(trees, cosiSubProtocols)

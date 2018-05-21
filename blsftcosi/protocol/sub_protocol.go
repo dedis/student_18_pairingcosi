@@ -114,7 +114,16 @@ func (p *SubBlsFtCosi) Dispatch() error {
 	p.Publics = announcement.Publics
 	p.Timeout = announcement.Timeout
 	//var err error
+/*
+	log.Lvl3(p.ServerIdentity().Address, "1", p.Msg)
+	log.Lvl3(p.ServerIdentity().Address, "2", p.Data)
+	log.Lvl3(p.ServerIdentity().Address, "3", p.Publics)
+	log.Lvl3(p.ServerIdentity().Address, "4", p.Timeout)
+*/
 
+	if errs := p.SendToChildrenInParallel(&announcement.Announcement); len(errs) > 0 {
+		log.Lvl3(p.ServerIdentity().Address, "failed to send announcement to all children")
+	}
 	// TODO don't understand this
 	//if errs := p.Multicast(&challenge.Challenge, committedChildren...); len(errs) > 0 {
 	//	log.Lvl3(p.ServerIdentity().Address, "")
@@ -128,16 +137,18 @@ func (p *SubBlsFtCosi) Dispatch() error {
 loop:
 	// note that this section will not execute if it's on a leaf
 	for range p.Children() {
+		//log.Lvl3(p.ServerIdentity().Address, "5")
 		select {
 			case response, channelOpen := <-p.ChannelResponse:
-			if !channelOpen {
-				return nil
+				if !channelOpen {
+					return nil
+				}
+				responses = append(responses, response)
+			case <-t:
+				break loop
 			}
-			responses = append(responses, response)
-		case <-t:
-			break loop
-		}
 	}
+	//log.Lvl3(p.ServerIdentity().Address, "6")
 
 	// TODO
 	ok := true

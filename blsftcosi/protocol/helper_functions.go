@@ -146,11 +146,13 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte) err
 	mask.SetMask(sig[lenCom:])
 	//fmt.Println("xxx 5", mask.mask)
 	pks := mask.AggregatePublic
+	/*
 	ABuff, err := pks.MarshalBinary()
 	if err != nil {
 		return errors.New("marshalling of aggregate public key failed")
 	}
-	fmt.Println("xxx 6", ABuff)
+	*/
+	//fmt.Println("xxx 6", ABuff)
 /*
 	// Recompute the challenge
 	hash := suite.Hash()
@@ -168,7 +170,7 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte) err
 	//kA := suite.G2().Point().Mul(k, minusPublic)
 	//sB := suite.G2().Point().Mul(r, nil)
 	//left := suite.G2().Point().Add(kA, nil) // TODO was sB
-	fmt.Println("xxx signature", signature)
+	//fmt.Println("xxx signature", signature)
 	err = bls.Verify(suite, pks, message, signature)
 	if err != nil {
 		return fmt.Errorf("didn't get a valid signature: %s", err)
