@@ -12,6 +12,8 @@ import (
 	"bls-ftcosi/onet/log"
 	"github.com/dedis/kyber/pairing"
 	"github.com/dedis/kyber/pairing/bn256"
+
+	"reflect"
 )
 
 // sub_protocol is run by each sub-leader and each node once, and n times by 
@@ -123,14 +125,7 @@ func (p *SubBlsFtCosi) Dispatch() error {
 
 	if errs := p.SendToChildrenInParallel(&announcement.Announcement); len(errs) > 0 {
 		log.Lvl3(p.ServerIdentity().Address, "failed to send announcement to all children")
-	}
-	// TODO don't understand this
-	//if errs := p.Multicast(&challenge.Challenge, committedChildren...); len(errs) > 0 {
-	//	log.Lvl3(p.ServerIdentity().Address, "")
-	//}
-
-	// Timeout is shorter than root protocol because itself waits on this
-	
+	}	
 
 	// Collect all responses from children, store them and wait till all have responded or timed out.
 	responses := make([]StructResponse, 0)
@@ -140,6 +135,7 @@ func (p *SubBlsFtCosi) Dispatch() error {
 			if !channelOpen {
 				return nil
 			}
+			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ WQOQOOQOOQOQO", reflect.TypeOf(response.CoSiReponse), response.CoSiReponse)
 			responses = append(responses, response)
 		case <-time.After(p.Timeout):
 			// the timeout here should be shorter than the main protocol timeout
@@ -152,9 +148,12 @@ func (p *SubBlsFtCosi) Dispatch() error {
 loop:
 	// note that this section will not execute if it's on a leaf
 		for range p.Children() {
+			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "oOoOoOoOoOoOoOoOoO--------- 1 child")
 			//log.Lvl3(p.ServerIdentity().Address, "5")
 			select {
 				case response, channelOpen := <-p.ChannelResponse:
+					log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ WQAWAWAWAWA", reflect.TypeOf(response.CoSiReponse), response.CoSiReponse)
+
 					if !channelOpen {
 						return nil
 					}
@@ -169,6 +168,15 @@ loop:
 	// TODO
 	ok := true
 
+	if p.IsLeaf() {
+		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ooooooooo is leaf ")
+
+		//p.ChannelResponse <- StructResponse{}
+	} else {
+		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ooooooooo is NOT NOT NOT leaf ")
+
+	}
+
 	if p.IsRoot() {
 		// send response to super-protocol
 		if len(responses) != 1 {
@@ -179,15 +187,35 @@ loop:
 		p.subResponse <- responses[0]
 	} else {
 		// Generate own signature and aggregate with all children signatures
+
+		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "*****************************")
 		signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.Publics, responses, p.Msg, ok)
+		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "*****************************", reflect.TypeOf(signaturePoint))
+
 
 		if err != nil {
 			return err
 		}
-		err = p.SendToParent(&Response{signaturePoint, finalMask.mask})
+		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ", signaturePoint, finalMask.mask, reflect.TypeOf(signaturePoint))
+
+		if p.IsLeaf() {
+			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LEAF", p.TreeNodeInstance.Parent())
+			///rrr := Response{signaturePoint, finalMask.mask}
+			///log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LEAF", rrr)
+
+			//p.ChannelResponse <- StructResponse{Response:rrr}
+			//p.ChannelResponse <- Response{signaturePoint, finalMask.mask}
+		} else {
+			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ NOT LEAF")			
+		}
+
+		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE", reflect.TypeOf(signaturePoint), signaturePoint)			
+/*
+		err = p.SendToParent(&Response{CoSiReponse:signaturePoint, Mask:finalMask.mask})
 		if err != nil {
 			return err
 		}
+		*/
 	}
 
 	return nil

@@ -61,12 +61,14 @@ func TestMain(m *testing.M) {
 */
 // Tests various trees configurations
 func TestProtocol(t *testing.T) {
-	nodes := []int{2} // []int{1, 2, 5, 13, 24}
-	subtrees := []int{1} //  []int{1, 2, 5, 9}
+	// TODO doesn't work with 1 subtree and 5 or more nodes (works for 1 to 4 nodes)
+	nodes :=  []int{5} // []int{1, 2, 5, 13, 24}
+	subtrees := []int{1} // []int{1, 2, 5, 9}
 	proposal := []byte{0xFF}
 
 	for _, nNodes := range nodes {
 		for _, nSubtrees := range subtrees {
+			log.Lvl2("---------------------------------------------------")
 			log.Lvl2("test asking for", nNodes, "nodes and", nSubtrees, "subtrees")
 
 			local := onet.NewLocalTest(*testSuite) // TODO pointer?

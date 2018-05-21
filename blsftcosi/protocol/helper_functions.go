@@ -10,6 +10,8 @@ import (
 	//"github.com/dedis/kyber/sign/cosi"
 	"github.com/dedis/kyber/pairing"
 	"bls-ftcosi/onet/log"
+
+	"reflect"
 )
 
 
@@ -33,6 +35,8 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 	var signatures []kyber.Point
 	var masks [][]byte
 	for _, r := range structResponses {
+		log.Lvl3(t.ServerIdentity().Address, "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", reflect.TypeOf(r.CoSiReponse))
+
 		signatures = append(signatures, r.CoSiReponse)
 		masks = append(masks, r.Mask)
 	}
@@ -51,8 +55,9 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 	}
 	personalPointSig, err := signedByteSliceToPoint(ps, personalSig)
 	if !ok {
-		personalPointSig = ps.G2().Point()
+		personalPointSig = ps.G1().Point()
 	}
+	log.Lvl3(t.ServerIdentity().Address, "PPPPPPPPPPPPPERSONAL PPOINT SIG", reflect.TypeOf(personalPointSig))
 
 	signatures = append(signatures, personalPointSig)
 
@@ -80,6 +85,11 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 
 func signedByteSliceToPoint(ps pairing.Suite, sig []byte) (kyber.Point, error) {
 	pointSig := ps.G1().Point()
+
+	//log.Lvl1("TTTTTTTTTTTTTTTTTTTTTTTTTTTTT", reflect.TypeOf(pointSig))
+	//log.Lvl1("TTTTTTTTTTTTTTTTTTTTTTTTTTTTT", reflect.TypeOf(sig))
+
+
 	if err := pointSig.UnmarshalBinary(sig); err != nil {
 		return nil, err
 	}
@@ -95,7 +105,11 @@ func aggregateSignatures(suite pairing.Suite, signatures []kyber.Point, masks []
 	}
 	aggMask := make([]byte, len(masks[0]))
 	r := suite.G1().Point()
+	for _, signature := range signatures {
+		log.Lvl3("IMPORTANT, EXCEPRTION EXCEPRTION EXCEPRTION", reflect.TypeOf(signature))
+	}
 	for i, signature := range signatures {
+
 		r = r.Add(r, signature)
 		aggMask, err = AggregateMasks(aggMask, masks[i])
 		if err != nil {
@@ -131,6 +145,8 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte) err
 	signature := sig[:lenCom]
 	//fmt.Println("xxx vbuff",signature)
 	sigma := suite.G1().Point()
+	log.Lvl1("TTTTTTTTTTTTTTTTTTTTTTTTTTTTT", reflect.TypeOf(sigma))
+
 	if err := sigma.UnmarshalBinary(signature); err != nil {
 		return errors.New("unmarshalling of commitment failed")
 	}

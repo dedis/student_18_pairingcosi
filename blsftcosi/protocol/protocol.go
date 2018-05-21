@@ -156,11 +156,13 @@ func (p *BlsFtCosi) Dispatch() error {
 	}
 	log.Lvl3(p.ServerIdentity().Address, "all protocols started")
 
-	// Wait and collect all the signatures
-	signatures, runningSubProtocols, err := p.collectSignatures(trees, cosiSubProtocols)
+	// Wait and collect all the signature responses
+	responses, runningSubProtocols, err := p.collectSignatures(trees, cosiSubProtocols)
 	if err != nil {
 		return err
 	}
+	log.Lvl3(p.ServerIdentity().Address, "BBBBBBBBBBBBBBBBBBBBB collected all signature responses")
+
 
 	_ = runningSubProtocols
 
@@ -168,7 +170,7 @@ func (p *BlsFtCosi) Dispatch() error {
 	ok := true
 
 	// generate root signature
-	signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.publics, signatures, p.Msg, ok)
+	signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.publics, responses, p.Msg, ok)
 	if err != nil {
 		return err
 	}
@@ -208,6 +210,8 @@ func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*Su
 	/////
 
 	for i, subProtocol := range cosiSubProtocols {
+		log.Lvl3("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc", i)
+
 		wg.Add(1)
 		go func(i int, subProtocol *SubBlsFtCosi) {
 			defer wg.Done()
@@ -244,6 +248,8 @@ func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*Su
 					cosiSubProtocols[i] = subProtocol
 					mut.Unlock()
 				case response := <-subProtocol.subResponse:
+					log.Lvl2("AAAAA leader received one response")
+
 					mut.Lock()
 					runningSubProtocols = append(runningSubProtocols, subProtocol)
 					responses = append(responses, response)
