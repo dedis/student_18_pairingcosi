@@ -130,23 +130,39 @@ func (p *SubBlsFtCosi) Dispatch() error {
 	//}
 
 	// Timeout is shorter than root protocol because itself waits on this
-	t := time.After(p.Timeout / 2)
+	
 
 	// Collect all responses from children, store them and wait till all have responded or timed out.
 	responses := make([]StructResponse, 0)
+	if p.IsRoot() {
+		select { // one commitment expected from super-protocol
+		case response, channelOpen := <-p.ChannelResponse:
+			if !channelOpen {
+				return nil
+			}
+			responses = append(responses, response)
+		case <-time.After(p.Timeout):
+			// the timeout here should be shorter than the main protocol timeout
+			// because main protocol waits on the channel below
+			p.subleaderNotResponding <- true
+			return nil
+		}
+	} else {
+		t := time.After(p.Timeout / 2)
 loop:
 	// note that this section will not execute if it's on a leaf
-	for range p.Children() {
-		//log.Lvl3(p.ServerIdentity().Address, "5")
-		select {
-			case response, channelOpen := <-p.ChannelResponse:
-				if !channelOpen {
-					return nil
+		for range p.Children() {
+			//log.Lvl3(p.ServerIdentity().Address, "5")
+			select {
+				case response, channelOpen := <-p.ChannelResponse:
+					if !channelOpen {
+						return nil
+					}
+					responses = append(responses, response)
+				case <-t:
+					break loop
 				}
-				responses = append(responses, response)
-			case <-t:
-				break loop
-			}
+		}
 	}
 	//log.Lvl3(p.ServerIdentity().Address, "6")
 
@@ -164,6 +180,7 @@ loop:
 	} else {
 		// Generate own signature and aggregate with all children signatures
 		signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.Publics, responses, p.Msg, ok)
+
 		if err != nil {
 			return err
 		}
