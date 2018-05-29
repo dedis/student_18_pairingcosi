@@ -3,13 +3,15 @@ package onet
 import (
 	"testing"
 
-	"github.com/dedis/kyber/suites"
+	//"github.com/dedis/kyber/suites"
 	"bls-ftcosi/onet/log"
 	"bls-ftcosi/onet/network"
 	"github.com/stretchr/testify/require"
+	"github.com/dedis/kyber/pairing/bn256"
+
 )
 
-var tSuite = suites.MustFind("Ed25519")
+var tSuite = *NewNetworkSuite(bn256.NewSuite()) // suites.MustFind("Ed25519")
 
 const clientServiceName = "ClientService"
 

@@ -386,6 +386,8 @@ func (n *TreeNodeInstance) reflectCreate(t reflect.Type, msg *ProtocolMsg) refle
 
 // dispatchChannel takes a message and sends it to a channel
 func (n *TreeNodeInstance) dispatchChannel(msgSlice []*ProtocolMsg) error {
+	log.Lvl2("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjcccccccccc", msgSlice[0])
+
 	mt := msgSlice[0].MsgType
 	defer func() {
 		// In rare occasions we write to a closed channel which throws a panic.
@@ -411,6 +413,8 @@ func (n *TreeNodeInstance) dispatchChannel(msgSlice []*ProtocolMsg) error {
 			out := reflect.ValueOf(n.channels[mt])
 			m := n.reflectCreate(to.Elem(), msg)
 			log.Lvl4(n.Name(), "Dispatching msg type", mt, " to", to, " :", m.Field(1).Interface())
+					log.Lvl2("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj", out.Len(), out.Cap(), mt, reflect.ValueOf(n.channels[mt]).Len())
+
 			if out.Len() < out.Cap() {
 				n.msgDispatchQueueMutex.Lock()
 				if !n.closing {

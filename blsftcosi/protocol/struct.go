@@ -75,6 +75,16 @@ type StructStop struct {
 }
 
 
+type Dummy struct{
+	DummyMsg []byte
+}
+
+type StructDummy struct {
+	*onet.TreeNode
+	Dummy
+}
+
+
 func Test() {
 	fmt.Println("hello")
 }

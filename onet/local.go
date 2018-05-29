@@ -32,6 +32,59 @@ func NewNetworkSuite(pairingSuite pairing.Suite) *NetworkSuite {
     }
 }
 
+func (n *NetworkSuite) MarshalBinary() ([]byte, error) {
+	log.Lvl2("---------------------------------------------------***************************************")
+
+	/*
+	pBuff, err := n.Public.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	*/
+
+	eddsa := make([]byte, 64)
+	/*
+	copy(eddsa, n.seed)
+	copy(eddsa[32:], pBuff)
+
+	*/
+	///////
+
+	g1PointBuff, err := n.G1().Point().MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	copy(eddsa, g1PointBuff)
+
+	///////
+	return eddsa, nil
+}
+
+// UnmarshalBinary transforms a slice of bytes into a EdDSA signature.
+func (n *NetworkSuite) UnmarshalBinary(buff []byte) error {
+	log.Lvl2("---------------------------------------------------*************************************** unmarshal")
+
+	if len(buff) != 64 {
+		return errors.New("wrong length for decoding EdDSA private")
+	}
+
+	/*
+	n.seed = buff[:32]
+	scalar := hashSeed(e.seed)
+	n.prefix = scalar[32:]
+	n.Secret = group.Scalar().SetBytes(scalar[:32])
+	n.Public = group.Point().Mul(e.Secret, nil)
+	*/
+
+	///////
+
+
+
+	///////
+	return nil
+}
+
 // LocalTest represents all that is needed for a local test-run
 type LocalTest struct {
 	// A map of ServerIdentity.Id to Servers

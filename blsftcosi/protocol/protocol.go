@@ -12,6 +12,7 @@ import (
 	"github.com/dedis/kyber/pairing/bn256"
 
 	//"reflect"
+	"errors"
 	
 )
 
@@ -24,7 +25,7 @@ type VerificationFn func(msg []byte, data []byte) bool
 // init is done at startup. It defines every messages that is handled by the network
 // and registers the protocols.
 func init() {
-	network.RegisterMessages(Announcement{}, Response{}, Stop{})
+	network.RegisterMessages(Announcement{}, Response{}, Stop{}, Dummy{})
 }
 
 
@@ -46,7 +47,8 @@ type BlsFtCosi struct {
 	startChan       chan bool
 	subProtocolName string
 	verificationFn  VerificationFn
-	pairingSuite pairing.Suite
+	pairingSuite 	pairing.Suite
+	dummyChannel 	chan StructDummy
 }
 
 
@@ -73,19 +75,29 @@ func NewBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, subProtocolName s
 		verificationFn:   vf,
 		subProtocolName:  subProtocolName,
 		pairingSuite:     pairingSuite,
+		dummyChannel:	  make(chan StructDummy),
 	}
+
+
+
+
+	err := c.RegisterChannel(c.dummyChannel)
+	if err != nil {
+		return nil, errors.New("couldn't register channel: " + err.Error())
+	}
+	
 
 	return c, nil
 }
 
-
+var ThePairingSuite = bn256.NewSuite()
 
 // NewDefaultProtocol is the default protocol function used for registration
 // with an always-true verification.
 // Called by GlobalRegisterDefaultProtocols
 func NewDefaultProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 	vf := func(a, b []byte) bool { return true }
-	return NewBlsFtCosi(n, vf, DefaultSubProtocolName, bn256.NewSuite())
+	return NewBlsFtCosi(n, vf, DefaultSubProtocolName, ThePairingSuite)
 }
 
 
@@ -107,6 +119,23 @@ func (p *BlsFtCosi) Shutdown() error {
 }
 
 func (p *BlsFtCosi) Dispatch() error {
+	
+	defer p.Done()
+	log.Lvl1("this is 1 protocol")
+
+	if p.IsRoot() {
+		//log.Lvl1(p.Tree().Size())
+		p.SendToChildren(&Dummy{DummyMsg:[]byte("msg")})
+		
+	} else {
+		<- p.dummyChannel
+		log.Lvl1("read message")
+	}
+
+	return nil
+	
+
+	/*
 	defer p.Done()
 
 	// if node is not root, doesn't use protocol but sub-protocol
@@ -194,6 +223,8 @@ func (p *BlsFtCosi) Dispatch() error {
 	log.Lvl3("Root-node is done without errors")
 
 	return nil
+	*/
+	
 }
 
 // Collect signatures from each sub-leader, restart whereever sub-leaders fail to respond.

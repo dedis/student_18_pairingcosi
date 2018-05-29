@@ -114,6 +114,8 @@ func MessageType(msg Message) MessageTypeID {
 // struct encoded by protobuf.  That slice of bytes can be then decoded with
 // Unmarshal. msg must be a pointer to the message.
 func Marshal(msg Message) ([]byte, error) {
+	log.Lvl3("99999999999999999999999999999999999999999999999999999999999999999999999 network.Marshal()", reflect.TypeOf(msg), msg)
+
 	var msgType MessageTypeID
 	if msgType = MessageType(msg); msgType == ErrorType {
 		return nil, fmt.Errorf("type of message %s not registered to the network library", reflect.TypeOf(msg))

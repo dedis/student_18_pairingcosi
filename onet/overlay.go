@@ -95,7 +95,8 @@ func (o *Overlay) Process(env *network.Envelope) {
 	io := o.protoIO.getByPacketType(env.MsgType)
 	inner, info, err := io.Unwrap(env.Msg)
 	if err != nil {
-		log.Error("unwrapping: ", err)
+		log.Error("unwrapping: ", err, env.MsgType, info)
+
 		return
 	}
 	switch true {
