@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"errors"
 
-	"github.com/dedis/kyber"
-	"bls-ftcosi/onet"
-	"github.com/dedis/kyber/sign/bls"
+	"gopkg.in/dedis/kyber.v2"
+	"gopkg.in/dedis/onet.v2"
+	"gopkg.in/dedis/kyber.v2/sign/bls"
 	//"github.com/dedis/kyber/sign/cosi"
-	"github.com/dedis/kyber/pairing"
-	"bls-ftcosi/onet/log"
+	"gopkg.in/dedis/kyber.v2/pairing"
+	"gopkg.in/dedis/onet.v2/log"
 
 	"reflect"
 )
@@ -34,6 +34,8 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 	// extract lists of responses
 	var signatures []kyber.Point
 	var masks [][]byte
+	log.Lvl3(t.ServerIdentity().Address, "*************************************************** GENERATE SIGNATURES", len(structResponses))
+
 	for _, r := range structResponses {
 		log.Lvl3(t.ServerIdentity().Address, "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", reflect.TypeOf(r.CoSiReponse))
 

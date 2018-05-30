@@ -8,13 +8,13 @@ import (
 	"time"
 
 	//"github.com/dedis/cothority"
-	"github.com/dedis/kyber"
-	"github.com/dedis/kyber/sign/cosi"
-	"bls-ftcosi/onet"
-	"bls-ftcosi/onet/log"
+	"gopkg.in/dedis/kyber.v2"
+	"gopkg.in/dedis/kyber.v2/sign/cosi"
+	"gopkg.in/dedis/onet.v2"
+	"gopkg.in/dedis/onet.v2/log"
 	//"github.com/stretchr/testify/require"
 	//"github.com/dedis/kyber/pairing/bn256"
-	//"github.com/dedis/kyber/pairing"
+	"gopkg.in/dedis/kyber.v2/pairing"
 
 
 )
@@ -46,7 +46,20 @@ func init() {
 	})
 }
 
-var testSuite = *onet.NewNetworkSuite(ThePairingSuite)
+type NetworkSuite struct {
+    kyber.Group
+    pairing.Suite
+}
+
+
+func NewNetworkSuite(pairingSuite pairing.Suite) *NetworkSuite {
+    return &NetworkSuite{
+        Group: pairingSuite.G2(),
+        Suite: pairingSuite,
+    }
+}
+
+var testSuite = *NewNetworkSuite(ThePairingSuite)
 var defaultTimeout = 5 * time.Second
 /*
 func TestMain(m *testing.M) {
@@ -58,7 +71,8 @@ func TestMain(m *testing.M) {
 }
 */
 
-/*
+
+
 // Tests various trees configurations
 func TestProtocol(t *testing.T) {
 	// TODO doesn't work with 1 subtree and 5 or more nodes (works for 1 to 4 nodes)
@@ -108,8 +122,10 @@ func TestProtocol(t *testing.T) {
 		}
 	}
 }
-*/
 
+
+
+/*
 
 func TestDummy(t *testing.T) {
 	nNodes := 2
@@ -135,9 +151,10 @@ func TestDummy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second *3)
 
 }
+*/
 
 
 func getAndVerifySignature(cosiProtocol *BlsFtCosi, publics []kyber.Point,

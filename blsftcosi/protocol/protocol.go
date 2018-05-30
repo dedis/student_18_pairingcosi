@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"sync"
 	"time"
-	"bls-ftcosi/onet/network"
-	"bls-ftcosi/onet"
-	"github.com/dedis/kyber"
-	"bls-ftcosi/onet/log"
-	"github.com/dedis/kyber/pairing"
-	"github.com/dedis/kyber/pairing/bn256"
+	"gopkg.in/dedis/onet.v2/network"
+	"gopkg.in/dedis/onet.v2"
+	"gopkg.in/dedis/kyber.v2"
+	"gopkg.in/dedis/onet.v2/log"
+	"gopkg.in/dedis/kyber.v2/pairing"
+	"gopkg.in/dedis/kyber.v2/pairing/bn256"
 
 	//"reflect"
-	"errors"
+	//"errors"
 	
 )
 
@@ -25,7 +25,7 @@ type VerificationFn func(msg []byte, data []byte) bool
 // init is done at startup. It defines every messages that is handled by the network
 // and registers the protocols.
 func init() {
-	network.RegisterMessages(Announcement{}, Response{}, Stop{}, Dummy{})
+	network.RegisterMessages(Announcement{}, Response{}, Stop{},/* Dummy{}*/)
 }
 
 
@@ -48,7 +48,7 @@ type BlsFtCosi struct {
 	subProtocolName string
 	verificationFn  VerificationFn
 	pairingSuite 	pairing.Suite
-	dummyChannel 	chan StructDummy
+	//ChannelDummy 	chan StructDummy
 }
 
 
@@ -75,16 +75,17 @@ func NewBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, subProtocolName s
 		verificationFn:   vf,
 		subProtocolName:  subProtocolName,
 		pairingSuite:     pairingSuite,
-		dummyChannel:	  make(chan StructDummy),
 	}
 
 
+/*
 
-
-	err := c.RegisterChannel(c.dummyChannel)
+	err := c.RegisterChannel(&c.ChannelDummy)
 	if err != nil {
 		return nil, errors.New("couldn't register channel: " + err.Error())
 	}
+	*/
+	
 	
 
 	return c, nil
@@ -119,23 +120,25 @@ func (p *BlsFtCosi) Shutdown() error {
 }
 
 func (p *BlsFtCosi) Dispatch() error {
-	
+	/*
 	defer p.Done()
 	log.Lvl1("this is 1 protocol")
 
 	if p.IsRoot() {
 		//log.Lvl1(p.Tree().Size())
+		time.Sleep(time.Second *1)
 		p.SendToChildren(&Dummy{DummyMsg:[]byte("msg")})
 		
 	} else {
-		<- p.dummyChannel
-		log.Lvl1("read message")
+		<- p.ChannelDummy
+		log.Lvl1("received message")
 	}
 
 	return nil
+	*/
 	
 
-	/*
+	
 	defer p.Done()
 
 	// if node is not root, doesn't use protocol but sub-protocol
@@ -223,7 +226,7 @@ func (p *BlsFtCosi) Dispatch() error {
 	log.Lvl3("Root-node is done without errors")
 
 	return nil
-	*/
+	
 	
 }
 

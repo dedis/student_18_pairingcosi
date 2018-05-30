@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dedis/kyber"
-	"bls-ftcosi/onet"
-	"bls-ftcosi/onet/log"
-	"github.com/dedis/kyber/pairing"
-	"github.com/dedis/kyber/pairing/bn256"
+	"gopkg.in/dedis/kyber.v2"
+	"gopkg.in/dedis/onet.v2"
+	"gopkg.in/dedis/onet.v2/log"
+	"gopkg.in/dedis/kyber.v2/pairing"
+	"gopkg.in/dedis/kyber.v2/pairing/bn256"
 
 	"reflect"
 )

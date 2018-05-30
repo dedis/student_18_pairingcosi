@@ -9,8 +9,8 @@ protocol, as in Test Driven Development.
 import (
 	"testing"
 
-	"bls-ftcosi/onet"
-	"bls-ftcosi/onet/network"
+	"gopkg.in/dedis/onet.v2"
+	"gopkg.in/dedis/onet.v2/network"
 )
 
 // tests the root of the trees
