@@ -5,10 +5,11 @@ import (
 	"errors"
 
 	"gopkg.in/dedis/kyber.v2"
-	"gopkg.in/dedis/onet.v2"
 	"gopkg.in/dedis/kyber.v2/sign/bls"
 	"gopkg.in/dedis/kyber.v2/pairing"
+	"gopkg.in/dedis/onet.v2"
 	"gopkg.in/dedis/onet.v2/log"
+	"gopkg.in/dedis/onet.v2/network"
 )
 
 
@@ -38,13 +39,29 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 		signatures = append(signatures, atmp)
 		masks = append(masks, r.Mask)
 	}
+	log.Lvl2("MASKS ", masks)
 
 	//generate personal mask
 	personalMask, err := NewMask(ps, publics, t.Public())
-	masks = append(masks, personalMask.Mask())
-	// TODO
 
 	// TODO if not ok, remove bit in mask
+	if !ok {
+		var found bool
+		for i, p := range publics {
+			if p.Equal(t.Public()) {
+				log.Lvl2("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa ")
+				personalMask.SetBit(i, false)
+				found = true
+			}
+		}
+		if !found {
+			return nil, nil, errors.New("failed to find own public key")
+		}
+	}
+
+	masks = append(masks, personalMask.Mask())
+	log.Lvl2("MASKZ ", masks)
+
 
 	// generate personal signature and append to other sigs
 	personalSig, err := bls.Sign(ps, t.Private(), msg)
@@ -126,7 +143,7 @@ func AppendSigAndMask(signature []byte, mask *Mask) ([]byte) {
 
 // Verify checks the given cosignature on the provided message using the list
 // of public keys and cosigning policy.
-func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte) error {
+func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte, policy Policy) error {
 	if publics == nil {
 		return errors.New("no public keys provided")
 	}
@@ -141,19 +158,16 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte) err
 	lenCom := suite.G1().PointLen()
 	signature := sig[:lenCom]
 
-
-
 	// Unpack the participation mask and get the aggregate public key
 	mask, err := NewMask(suite, publics, nil)
 	if err != nil {
 		return err
 	}
-	//fmt.Println("xxx 4")
+	
 	mask.SetMask(sig[lenCom:])
-	//fmt.Println("xxx 5", mask.mask)
+
 	pks := mask.AggregatePublic
 
-	
 	err = bls.Verify(suite, pks, message, signature)
 	if err != nil {
 		return fmt.Errorf("didn't get a valid signature: %s", err)
@@ -161,18 +175,54 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte) err
 		fmt.Println("Signature verified and is correct!")
 	}
 
-	// TODO check mask
-/*
-	if !left.Equal(sigma) || !check(mask) {
-		return errors.New("invalid signature")
+	
+	fmt.Println("******************")
+	fmt.Println(mask)
+	fmt.Println(mask.CountEnabled())
+	fmt.Println(mask.CountTotal())
+
+
+	if !policy.Check(mask) {
+		return errors.New("the policy is not fulfilled")
+	} else {
+		fmt.Println("Mask threshold verified and is correct!")
 	}
-	*/
+
+	// TODO check mask
 
 	return nil
 }
 
-// Check verifies that all participants have contributed to a collective
-// signature.
-func check(m *Mask) bool {
-	return m.CountEnabled() == m.CountTotal()
+// GetLeafsIDs returns a slice of leaves for tree
+func GetLeafsIDs(tree *onet.Tree, nNodes, nSubtrees int) ([]network.ServerIdentityID, error) {
+	exampleTrees, err := genTrees(tree.Roster, nNodes, nSubtrees)
+	if err != nil {
+		return nil, fmt.Errorf("error in creation of example tree:%s", err)
+	}
+	leafsIDs := make([]network.ServerIdentityID, 0)
+	for _, subtree := range exampleTrees {
+		if len(subtree.Root.Children) < 1 {
+			return nil, fmt.Errorf("expected a subtree with at least a subleader, but found none")
+		}
+		for _, leaf := range subtree.Root.Children[0].Children {
+			leafsIDs = append(leafsIDs, leaf.ServerIdentity.ID)
+		}
+	}
+	return leafsIDs, nil
+}
+
+// GetSubleaderIDs returns a slice of subleaders for tree
+func GetSubleaderIDs(tree *onet.Tree, nNodes, nSubtrees int) ([]network.ServerIdentityID, error) {
+	exampleTrees, err := genTrees(tree.Roster, nNodes, nSubtrees)
+	if err != nil {
+		return nil, fmt.Errorf("error in creation of example tree:%s", err)
+	}
+	subleadersIDs := make([]network.ServerIdentityID, 0)
+	for _, subtree := range exampleTrees {
+		if len(subtree.Root.Children) < 1 {
+			return nil, fmt.Errorf("expected a subtree with at least a subleader, but found none")
+		}
+		subleadersIDs = append(subleadersIDs, subtree.Root.Children[0].ServerIdentity.ID)
+	}
+	return subleadersIDs, nil
 }

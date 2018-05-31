@@ -167,7 +167,17 @@ func (p *BlsFtCosi) Dispatch() error {
 	_ = runningSubProtocols
 
 	// TODO
-	ok := true
+	//ok := true
+	ok := <-verifyChan
+	if !ok {
+		// root should not fail the verification otherwise it would not have
+		// started the protocol
+		p.FinalSignature <- nil
+		for _, coSiProtocol := range runningSubProtocols {
+			coSiProtocol.ChannelResponse <- StructResponse{}
+		}
+		return fmt.Errorf("verification failed on root node")
+	}
 
 	// generate root signature
 	signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.publics, responses, p.Msg, ok)
@@ -179,11 +189,8 @@ func (p *BlsFtCosi) Dispatch() error {
 	if err != nil {
 		return err
 	}
-	// TODO bit mask
-	// TODO create signature with appended mask
-	finalSignature := AppendSigAndMask(signature, finalMask)
 
-	//fmt.Println("xxx 1", reflect.TypeOf(finalSignature), finalSignature)
+	finalSignature := AppendSigAndMask(signature, finalMask)
 
 	log.Lvl3(p.ServerIdentity().Address, "Created final signature")
 
@@ -282,6 +289,10 @@ func (p *BlsFtCosi) Start() error {
 	if p.Msg == nil {
 		close(p.startChan)
 		return fmt.Errorf("no proposal msg specified")
+	}
+	if p.CreateProtocol == nil {
+		close(p.startChan)
+		return fmt.Errorf("no create protocol function specified")
 	}
 	if p.verificationFn == nil {
 		close(p.startChan)

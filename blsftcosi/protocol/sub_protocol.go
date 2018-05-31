@@ -116,6 +116,14 @@ func (p *SubBlsFtCosi) Dispatch() error {
 	p.Timeout = announcement.Timeout
 	//var err error
 
+	verifyChan := make(chan bool, 1)
+	if !p.IsRoot() {
+		go func() {
+			log.Lvl3(p.ServerIdentity(), "starting verification")
+			verifyChan <- p.verificationFn(p.Msg, p.Data)
+		}()
+	}
+
 
 	if errs := p.SendToChildrenInParallel(&announcement.Announcement); len(errs) > 0 {
 		log.Lvl3(p.ServerIdentity().Address, "failed to send announcement to all children")
@@ -155,7 +163,8 @@ loop:
 	}
 
 	// TODO
-	ok := true
+	//ok := true
+	var ok bool
 
 
 	if p.IsRoot() {
@@ -167,6 +176,14 @@ loop:
 		}
 		p.subResponse <- responses[0]
 	} else {
+
+		ok = <-verifyChan
+		if !ok {
+			log.Lvl2(p.ServerIdentity().Address, "verification failed, unsetting the mask")
+		}
+
+		// unset the mask if the verification failed and remove commitment
+		
 		// Generate own signature and aggregate with all children signatures
 		signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.Publics, responses, p.Msg, ok)
 
@@ -176,6 +193,24 @@ loop:
 		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ", finalMask.mask)
 
 		tmp, err := PointToByteSlice(p.pairingSuite, signaturePoint)
+
+		var found bool
+		if !ok {
+			for i := range p.Publics {
+				if p.Public().Equal(p.Publics[i]) {
+					finalMask.SetBit(i, false)
+					found = true
+					break
+				}
+			}
+		}
+		if !ok && !found {
+			return fmt.Errorf("%s was unable to find its own public key", p.ServerIdentity().Address)
+		}
+
+		if !ok {
+			return errors.New("stopping because we won't send to parent")
+		}
 
 
 		err = p.SendToParent(&Response{CoSiReponse:tmp, Mask:finalMask.mask})

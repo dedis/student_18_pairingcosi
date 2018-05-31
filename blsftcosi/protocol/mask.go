@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/dedis/kyber.v2"
 	"gopkg.in/dedis/kyber.v2/pairing"
+	"gopkg.in/dedis/onet.v2/log"
 
 )
 
@@ -23,24 +24,30 @@ type Mask struct {
 // it is present in the list of keys and sets the corresponding index in the
 // bitmask to 1 (enabled).
 func NewMask(suite pairing.Suite, publics []kyber.Point, myKey kyber.Point) (*Mask, error) {
+	log.Lvl2("newMask() ")
 	m := &Mask{
 		publics: publics,
 	}
 	m.mask = make([]byte, m.Len())
+	log.Lvl2("m.mask", m.mask)
 	m.AggregatePublic = suite.G2().Point().Null()
 	if myKey != nil {
 		found := false
 		for i, key := range publics {
 			if key.Equal(myKey) {
+				log.Lvl2("FOUND", myKey)
 				m.SetBit(i, true)
 				found = true
 				break
+			} else {
+				log.Lvl2("not found", myKey)
 			}
 		}
 		if !found {
 			return nil, errors.New("key not found")
 		}
 	}
+	log.Lvl2("returning newMask()", m.mask)
 	return m, nil
 }
 
@@ -85,10 +92,15 @@ func (m *Mask) SetBit(i int, enable bool) error {
 		return errors.New("index out of range")
 	}
 	byt := i >> 3
+	log.Lvl2("i ", i)
+	log.Lvl2("byt ", byt)
 	msk := byte(1) << uint(i&7)
+	log.Lvl2("msk", msk)
+	log.Lvl2("m.mask[byt]", m.mask[byt])
 	if ((m.mask[byt] & msk) == 0) && enable {
 		m.mask[byt] ^= msk // flip bit in mask from 0 to 1
 		m.AggregatePublic.Add(m.AggregatePublic, m.publics[i])
+		log.Lvl2("changed m.mask[byt]", m.mask[byt])
 	}
 	if ((m.mask[byt] & msk) != 0) && !enable {
 		m.mask[byt] ^= msk // flip bit in mask from 1 to 0
@@ -148,5 +160,45 @@ func AggregateMasks(a, b []byte) ([]byte, error) {
 		m[i] = a[i] | b[i]
 	}
 	return m, nil
+}
+
+// Policy represents a fully customizable cosigning policy deciding what
+// cosigner sets are and aren't sufficient for a collective signature to be
+// considered acceptable to a verifier. The Check method may inspect the set of
+// participants that cosigned by invoking cosi.Mask and/or cosi.MaskBit, and may
+// use any other relevant contextual information (e.g., how security-critical
+// the operation relying on the collective signature is) in determining whether
+// the collective signature was produced by an acceptable set of cosigners.
+type Policy interface {
+	Check(m *Mask) bool
+}
+
+// CompletePolicy is the default policy requiring that all participants have
+// cosigned to make a collective signature valid.
+type CompletePolicy struct {
+}
+
+// Check verifies that all participants have contributed to a collective
+// signature.
+func (p CompletePolicy) Check(m *Mask) bool {
+	return m.CountEnabled() == m.CountTotal()
+}
+
+// ThresholdPolicy allows to specify a simple t-of-n policy requring that at
+// least the given threshold number of participants t have cosigned to make a
+// collective signature valid.
+type ThresholdPolicy struct {
+	thold int
+}
+
+// NewThresholdPolicy returns a new ThresholdPolicy with the given threshold.
+func NewThresholdPolicy(thold int) *ThresholdPolicy {
+	return &ThresholdPolicy{thold: thold}
+}
+
+// Check verifies that at least a threshold number of participants have
+// contributed to a collective signature.
+func (p ThresholdPolicy) Check(m *Mask) bool {
+	return m.CountEnabled() >= p.thold
 }
 
