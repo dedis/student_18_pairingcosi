@@ -137,7 +137,6 @@ func (p *BlsFtCosi) Dispatch() error {
 	return nil
 	*/
 	
-
 	
 	defer p.Done()
 
@@ -181,11 +180,13 @@ func (p *BlsFtCosi) Dispatch() error {
 	// start all subprotocols
 	cosiSubProtocols := make([]*SubBlsFtCosi, len(trees))
 	for i, tree := range trees {
+
 		cosiSubProtocols[i], err = p.startSubProtocol(tree)
 		if err != nil {
 			return err
 		}
 	}
+
 	log.Lvl3(p.ServerIdentity().Address, "all protocols started")
 
 	// Wait and collect all the signature responses
@@ -193,7 +194,7 @@ func (p *BlsFtCosi) Dispatch() error {
 	if err != nil {
 		return err
 	}
-	log.Lvl3(p.ServerIdentity().Address, "BBBBBBBBBBBBBBBBBBBBB collected all signature responses")
+	log.Lvl3(p.ServerIdentity().Address, "collected all signature responses")
 
 
 	_ = runningSubProtocols
@@ -251,7 +252,9 @@ func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*Su
 			defer wg.Done()
 			for {
 				select {
-				case <-subProtocol.subleaderNotResponding: // TODO need to modify not reponsing step?
+				case <-subProtocol.subleaderNotResponding: // TODO need to modify not reponding step?
+					log.Lvl3("================================================================================= 1 subleaderNotResponding")
+
 					subleaderID := trees[i].Root.Children[0].RosterIndex
 					log.Lvlf2("subleader from tree %d (id %d) failed, restarting it", i, subleaderID)
 
@@ -282,7 +285,9 @@ func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*Su
 					cosiSubProtocols[i] = subProtocol
 					mut.Unlock()
 				case response := <-subProtocol.subResponse:
-					log.Lvl2("AAAAA leader received one response")
+					log.Lvl3("================================================================================= 2 subResponse")
+
+					log.Lvl2("AAAAA leader received one response", response)
 
 					mut.Lock()
 					runningSubProtocols = append(runningSubProtocols, subProtocol)
@@ -290,6 +295,8 @@ func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*Su
 					mut.Unlock()
 					return
 				case <-time.After(p.Timeout):
+					log.Lvl3("================================================================================= 3 timeout")
+
 					err := fmt.Errorf("(node %v) didn't get response after timeout %v", i, p.Timeout)
 					errChan <- err
 					return

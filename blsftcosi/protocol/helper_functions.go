@@ -21,6 +21,8 @@ import (
 func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyber.Point, structResponses []StructResponse,
 	msg []byte, ok bool) (kyber.Point, *Mask, error) {
 
+
+
 	if t == nil {
 		return nil, nil, fmt.Errorf("TreeNodeInstance should not be nil, but is")
 	} else if structResponses == nil {
@@ -38,8 +40,9 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 
 	for _, r := range structResponses {
 		log.Lvl3(t.ServerIdentity().Address, "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", reflect.TypeOf(r.CoSiReponse))
-
-		signatures = append(signatures, r.CoSiReponse)
+		atmp, err := signedByteSliceToPoint(ps, r.CoSiReponse)
+		_ = err
+		signatures = append(signatures, atmp)
 		masks = append(masks, r.Mask)
 	}
 
@@ -52,6 +55,8 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 
 	// generate personal signature and append to other sigs
 	personalSig, err := bls.Sign(ps, t.Private(), msg)
+	log.Lvl3("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ generateSignature", msg, personalSig)
+
 	if err != nil {
 			return nil,nil,  err
 	}
@@ -59,7 +64,6 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 	if !ok {
 		personalPointSig = ps.G1().Point()
 	}
-	log.Lvl3(t.ServerIdentity().Address, "PPPPPPPPPPPPPERSONAL PPOINT SIG", reflect.TypeOf(personalPointSig))
 
 	signatures = append(signatures, personalPointSig)
 
@@ -88,15 +92,29 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 func signedByteSliceToPoint(ps pairing.Suite, sig []byte) (kyber.Point, error) {
 	pointSig := ps.G1().Point()
 
-	//log.Lvl1("TTTTTTTTTTTTTTTTTTTTTTTTTTTTT", reflect.TypeOf(pointSig))
-	//log.Lvl1("TTTTTTTTTTTTTTTTTTTTTTTTTTTTT", reflect.TypeOf(sig))
-
 
 	if err := pointSig.UnmarshalBinary(sig); err != nil {
 		return nil, err
 	}
 
 	return pointSig, nil
+}
+
+func PointToByteSlice(ps pairing.Suite, sig kyber.Point) ([]byte, error) {
+	//byteSig := make([]byte, sig.EmbedLen())
+
+/*
+	if err := sig.MarshalBinary(byteSig); err != nil {
+		return nil, err
+	}
+	*/
+
+	byteSig, err := sig.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	return byteSig, nil
 }
 
 // AggregateResponses returns the sum of given responses.
@@ -107,10 +125,10 @@ func aggregateSignatures(suite pairing.Suite, signatures []kyber.Point, masks []
 	}
 	aggMask := make([]byte, len(masks[0]))
 	r := suite.G1().Point()
-	for _, signature := range signatures {
-		log.Lvl3("IMPORTANT, EXCEPRTION EXCEPRTION EXCEPRTION", reflect.TypeOf(signature))
-	}
+
 	for i, signature := range signatures {
+		tmp, err := PointToByteSlice(suite, signature)
+		log.Lvl3("çççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççççç", r, tmp)
 
 		r = r.Add(r, signature)
 		aggMask, err = AggregateMasks(aggMask, masks[i])
@@ -189,11 +207,31 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte) err
 	//sB := suite.G2().Point().Mul(r, nil)
 	//left := suite.G2().Point().Add(kA, nil) // TODO was sB
 	//fmt.Println("xxx signature", signature)
+
+	s2 := suite.G1().Point()
+	if err := s2.UnmarshalBinary(signature); err != nil {
+		return err
+	}
+	fmt.Println("s2", s2)
+	
+	fmt.Println(signature)
+	signature = signature[:len(signature)-1]
+	signature = append(signature, 0xF)
+	fmt.Println(signature)
+
+	s := suite.G1().Point()
+	if err := s.UnmarshalBinary(signature); err != nil {
+		return err
+	}
+	fmt.Println("s", s)
+
+	
+	// TODO If I corrupt the signature before sending to bls.Verify, the test still passes... wtf
 	err = bls.Verify(suite, pks, message, signature)
 	if err != nil {
 		return fmt.Errorf("didn't get a valid signature: %s", err)
 	} else {
-		fmt.Println("OOOOOOOOOOOOOOOOO  signature verified and is correct!")
+		fmt.Println("Signature verified and is correct!")
 	}
 
 	// TODO check mask

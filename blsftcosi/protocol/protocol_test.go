@@ -76,9 +76,9 @@ func TestMain(m *testing.M) {
 // Tests various trees configurations
 func TestProtocol(t *testing.T) {
 	// TODO doesn't work with 1 subtree and 5 or more nodes (works for 1 to 4 nodes)
-	nodes :=  []int{4} // []int{1, 2, 5, 13, 24}
+	nodes :=  []int{24} // []int{1, 2, 5, 13, 24}
 	subtrees := []int{1} // []int{1, 2, 5, 9}
-	proposal := []byte{0xFF}
+	proposal := []byte("dedis") //[]byte{0xFF}
 
 	for _, nNodes := range nodes {
 		for _, nSubtrees := range subtrees {
@@ -174,6 +174,7 @@ func getAndVerifySignature(cosiProtocol *BlsFtCosi, publics []kyber.Point,
 func verifySignature(signature []byte, publics []kyber.Point,
 	proposal []byte, policy cosi.Policy) error {
 	// verify signature
+
 	
 	err := Verify(testSuite, publics, proposal, signature)
 	if err != nil {
