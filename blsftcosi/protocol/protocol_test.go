@@ -1,13 +1,11 @@
 package protocol
 
 import (
-	//"flag"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
-	//"github.com/dedis/cothority"
 	"gopkg.in/dedis/kyber.v2"
 	"gopkg.in/dedis/kyber.v2/sign/cosi"
 	"gopkg.in/dedis/onet.v2"
@@ -82,7 +80,6 @@ func TestProtocol(t *testing.T) {
 
 	for _, nNodes := range nodes {
 		for _, nSubtrees := range subtrees {
-			log.Lvl2("---------------------------------------------------")
 			log.Lvl2("test asking for", nNodes, "nodes and", nSubtrees, "subtrees")
 
 			local := onet.NewLocalTest(testSuite) // TODO pointer?

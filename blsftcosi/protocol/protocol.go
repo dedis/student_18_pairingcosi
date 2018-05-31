@@ -10,9 +10,6 @@ import (
 	"gopkg.in/dedis/onet.v2/log"
 	"gopkg.in/dedis/kyber.v2/pairing"
 	"gopkg.in/dedis/kyber.v2/pairing/bn256"
-
-	//"reflect"
-	//"errors"
 	
 )
 
@@ -25,7 +22,7 @@ type VerificationFn func(msg []byte, data []byte) bool
 // init is done at startup. It defines every messages that is handled by the network
 // and registers the protocols.
 func init() {
-	network.RegisterMessages(Announcement{}, Response{}, Stop{},/* Dummy{}*/)
+	network.RegisterMessages(Announcement{}, Response{}, Stop{})
 }
 
 
@@ -48,7 +45,6 @@ type BlsFtCosi struct {
 	subProtocolName string
 	verificationFn  VerificationFn
 	pairingSuite 	pairing.Suite
-	//ChannelDummy 	chan StructDummy
 }
 
 
@@ -75,18 +71,7 @@ func NewBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, subProtocolName s
 		verificationFn:   vf,
 		subProtocolName:  subProtocolName,
 		pairingSuite:     pairingSuite,
-	}
-
-
-/*
-
-	err := c.RegisterChannel(&c.ChannelDummy)
-	if err != nil {
-		return nil, errors.New("couldn't register channel: " + err.Error())
-	}
-	*/
-	
-	
+	}	
 
 	return c, nil
 }
@@ -120,24 +105,6 @@ func (p *BlsFtCosi) Shutdown() error {
 }
 
 func (p *BlsFtCosi) Dispatch() error {
-	/*
-	defer p.Done()
-	log.Lvl1("this is 1 protocol")
-
-	if p.IsRoot() {
-		//log.Lvl1(p.Tree().Size())
-		time.Sleep(time.Second *1)
-		p.SendToChildren(&Dummy{DummyMsg:[]byte("msg")})
-		
-	} else {
-		<- p.ChannelDummy
-		log.Lvl1("received message")
-	}
-
-	return nil
-	*/
-	
-	
 	defer p.Done()
 
 	// if node is not root, doesn't use protocol but sub-protocol
@@ -242,18 +209,13 @@ func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*Su
 	runningSubProtocols := make([]*SubBlsFtCosi, 0)
 
 
-	/////
-
 	for i, subProtocol := range cosiSubProtocols {
-		log.Lvl3("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc", i)
-
 		wg.Add(1)
 		go func(i int, subProtocol *SubBlsFtCosi) {
 			defer wg.Done()
 			for {
 				select {
 				case <-subProtocol.subleaderNotResponding: // TODO need to modify not reponding step?
-					log.Lvl3("================================================================================= 1 subleaderNotResponding")
 
 					subleaderID := trees[i].Root.Children[0].RosterIndex
 					log.Lvlf2("subleader from tree %d (id %d) failed, restarting it", i, subleaderID)
@@ -285,18 +247,12 @@ func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*Su
 					cosiSubProtocols[i] = subProtocol
 					mut.Unlock()
 				case response := <-subProtocol.subResponse:
-					log.Lvl3("================================================================================= 2 subResponse")
-
-					log.Lvl2("AAAAA leader received one response", response)
-
 					mut.Lock()
 					runningSubProtocols = append(runningSubProtocols, subProtocol)
 					responses = append(responses, response)
 					mut.Unlock()
 					return
 				case <-time.After(p.Timeout):
-					log.Lvl3("================================================================================= 3 timeout")
-
 					err := fmt.Errorf("(node %v) didn't get response after timeout %v", i, p.Timeout)
 					errChan <- err
 					return
@@ -316,7 +272,6 @@ func (p *BlsFtCosi) collectSignatures(trees []*onet.Tree, cosiSubProtocols []*Su
 		return nil, nil, fmt.Errorf("failed to collect responses with errors %v", errs)
 	}
 
-	///////////////////
 
 	return responses, runningSubProtocols, nil
 }
@@ -328,11 +283,6 @@ func (p *BlsFtCosi) Start() error {
 		close(p.startChan)
 		return fmt.Errorf("no proposal msg specified")
 	}
-	// TODO compile says always False
-	//if p.CreateProtocol == nil {
-	//	close(p.startChan)
-	//	return fmt.Errorf("no create protocol function specified")
-	//}
 	if p.verificationFn == nil {
 		close(p.startChan)
 		return fmt.Errorf("verification function cannot be nil")

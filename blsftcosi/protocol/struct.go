@@ -51,9 +51,9 @@ type StructAnnouncement struct {
 }
 
 
-// Response is the ftcosi response message
+// Response is the blsftcosi response message
 type Response struct {
-	CoSiReponse []byte //kyber.Point
+	CoSiReponse []byte
 	Mask        []byte
 }
 

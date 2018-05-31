@@ -13,7 +13,6 @@ import (
 	"gopkg.in/dedis/kyber.v2/pairing"
 	"gopkg.in/dedis/kyber.v2/pairing/bn256"
 
-	"reflect"
 )
 
 // sub_protocol is run by each sub-leader and each node once, and n times by 
@@ -99,8 +98,6 @@ func (p *SubBlsFtCosi) Shutdown() error {
 
 // Dispatch is the main method of the subprotocol, running on each node and handling the messages in order
 func (p *SubBlsFtCosi) Dispatch() error {
-	log.Lvl3(p.ServerIdentity().Address, "================================================================================== dispatch")
-
 	defer p.Done()
 
 	// TODO verification of Data
@@ -119,13 +116,6 @@ func (p *SubBlsFtCosi) Dispatch() error {
 	p.Timeout = announcement.Timeout
 	//var err error
 
-	log.Lvl3(p.ServerIdentity().Address, "1", "message is:", p.Msg)
-/*
-	log.Lvl3(p.ServerIdentity().Address, "1", p.Msg)
-	log.Lvl3(p.ServerIdentity().Address, "2", p.Data)
-	log.Lvl3(p.ServerIdentity().Address, "3", p.Publics)
-	log.Lvl3(p.ServerIdentity().Address, "4", p.Timeout)
-*/
 
 	if errs := p.SendToChildrenInParallel(&announcement.Announcement); len(errs) > 0 {
 		log.Lvl3(p.ServerIdentity().Address, "failed to send announcement to all children")
@@ -139,12 +129,10 @@ func (p *SubBlsFtCosi) Dispatch() error {
 			if !channelOpen {
 				return nil
 			}
-			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ WQOQOOQOOQOQO", reflect.TypeOf(response.CoSiReponse), response.CoSiReponse)
 			responses = append(responses, response)
 		case <-time.After(p.Timeout):
 			// the timeout here should be shorter than the main protocol timeout
 			// because main protocol waits on the channel below
-			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "========================================================= TIMEOUT !!!")
 
 			p.subleaderNotResponding <- true
 			return nil
@@ -154,12 +142,8 @@ func (p *SubBlsFtCosi) Dispatch() error {
 loop:
 	// note that this section will not execute if it's on a leaf
 		for range p.Children() {
-			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "oOoOoOoOoOoOoOoOoO--------- looping for 1 child")
-			//log.Lvl3(p.ServerIdentity().Address, "5")
 			select {
 				case response, channelOpen := <-p.ChannelResponse:
-					log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ WQAWAWAWAWA", reflect.TypeOf(response.CoSiReponse), response.CoSiReponse)
-
 					if !channelOpen {
 						return nil
 					}
@@ -169,19 +153,10 @@ loop:
 				}
 		}
 	}
-	//log.Lvl3(p.ServerIdentity().Address, "6")
 
 	// TODO
 	ok := true
 
-	if p.IsLeaf() {
-		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ooooooooo is leaf ")
-
-		//p.ChannelResponse <- StructResponse{}
-	} else {
-		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ooooooooo is NOT NOT NOT leaf ")
-
-	}
 
 	if p.IsRoot() {
 		// send response to super-protocol
@@ -193,38 +168,20 @@ loop:
 		p.subResponse <- responses[0]
 	} else {
 		// Generate own signature and aggregate with all children signatures
-
-		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "*****************************")
 		signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.Publics, responses, p.Msg, ok)
-		tmpp, err := PointToByteSlice(p.pairingSuite, signaturePoint)
-		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "*****************************", tmpp)
-
 
 		if err != nil {
 			return err
 		}
-		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ", signaturePoint, finalMask.mask, reflect.TypeOf(signaturePoint))
-
-		if p.IsLeaf() {
-			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LEAF", p.TreeNodeInstance.Parent())
-			///rrr := Response{signaturePoint, finalMask.mask}
-			///log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LEAF", rrr)
-
-			//p.ChannelResponse <- StructResponse{Response:rrr}
-			//p.ChannelResponse <- Response{signaturePoint, finalMask.mask}
-		} else {
-			log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ NOT LEAF")			
-		}
+		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ", finalMask.mask)
 
 		tmp, err := PointToByteSlice(p.pairingSuite, signaturePoint)
 
 
-		// TODO if remove this, no more mal formed errors
 		err = p.SendToParent(&Response{CoSiReponse:tmp, Mask:finalMask.mask})
 		if err != nil {
 			return err
 		}
-		
 		
 	}
 
