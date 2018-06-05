@@ -22,7 +22,7 @@ const RefuseOneProtocolName = "RefuseOneProtocol"
 const RefuseOneSubProtocolName = "RefuseOneSubProtocol"
 
 func init() {
-	log.SetDebugVisible(1)
+	log.SetDebugVisible(4)
 	GlobalRegisterDefaultProtocols()
 	onet.GlobalProtocolRegister(FailureProtocolName, func(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		vf := func(a, b []byte) bool { return true }
@@ -324,8 +324,8 @@ func TestProtocolErrors(t *testing.T) {
 
 func TestProtocolRefusalAll(t *testing.T) {
 	// TODO with 4 nodes passes, with 5 nodes and 1 subtree fails! (i.e. when there are 3 brother leaves)
-	nodes := []int{5} // []int{4, 5, 13}
-	subtrees :=  []int{1} // []int{1, 2, 5, 9}
+	nodes :=  []int{4, 5, 13}
+	subtrees :=   []int{1, 2, 5, 9}
 	proposal := []byte{0xFF}
 
 	for _, nNodes := range nodes {
@@ -364,7 +364,7 @@ func TestProtocolRefusalAll(t *testing.T) {
 			select {
 			case signature = <-cosiProtocol.FinalSignature:
 				log.Lvl3("Instance is done")
-			case <-time.After(defaultTimeout * 2):
+			case <-time.After(defaultTimeout * 4):
 				// wait a bit longer than the protocol timeout
 				local.CloseAll()
 				t.Fatal("didn't get commitment in time")
