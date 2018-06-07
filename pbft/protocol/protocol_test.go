@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	//"github.com/dedis/cothority_template/protocol"
 	"gopkg.in/dedis/kyber.v2/suites"
 	"gopkg.in/dedis/onet.v2"
 	"gopkg.in/dedis/onet.v2/log"
@@ -29,7 +28,7 @@ func TestNode(t *testing.T) {
 
 	proposal := []byte("dedis")
 	defaultTimeout := 5 * time.Second
-	nodes := []int{5} // []int{2, 5, 13}
+	nodes := []int{13} // []int{2, 5, 13}
 
 	for _, nbrNodes := range nodes {
 		local := onet.NewLocalTest(tSuite)
@@ -52,20 +51,14 @@ func TestNode(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		time.Sleep(time.Second *3)
-
-
-		//timeout := network.WaitRetry * time.Duration(network.MaxRetryConnect*nbrNodes*2) * time.Millisecond
-		/*
 		select {
-		case children := <-protocol.ChildCount:
-			log.Lvl2("Instance 1 is done")
-			require.Equal(t, children, nbrNodes, "Didn't get a child-cound of", nbrNodes)
-		case <-time.After(timeout):
-			t.Fatal("Didn't finish in time")
+		case finalReply := <-protocol.FinalReply:
+			log.Lvl3("============================ Leader sent final reply")
+			_ = finalReply
+		case <-time.After(defaultTimeout * 2):
+			log.Lvl3("Leader never got enough final replies, timed out")
 		}
-		*/
-		local.CloseAll()
+
 	}
 }
 

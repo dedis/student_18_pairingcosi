@@ -29,6 +29,7 @@ func init() {
 	network.RegisterMessage(PrePrepare{})
 	network.RegisterMessage(Prepare{})
 	network.RegisterMessage(Commit{})
+	network.RegisterMessage(Reply{})
 	onet.GlobalProtocolRegister(DefaultProtocolName, NewProtocol)
 }
 
@@ -43,6 +44,7 @@ type PbftProtocol struct {
 	Msg					[]byte
 	nNodes				int
 
+	FinalReply 			chan []byte
 	startChan       	chan bool
 	stoppedOnce    		sync.Once
 	verificationFn  	VerificationFn
@@ -51,6 +53,7 @@ type PbftProtocol struct {
 	ChannelPrePrepare   chan StructPrePrepare
 	ChannelPrepare 		chan StructPrepare
 	ChannelCommit		chan StructCommit
+	ChannelReply		chan StructReply
 
 
 }
@@ -64,12 +67,14 @@ func NewProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		TreeNodeInstance: 	n,
 		nNodes: 			n.Tree().Size(),
 		startChan:       	make(chan bool, 1),
+		FinalReply:   	make(chan []byte, 1),
 	}
 
 	for _, channel := range []interface{}{
 		&t.ChannelPrePrepare,
 		&t.ChannelPrepare,
 		&t.ChannelCommit,
+		&t.ChannelReply,
 	} {
 		err := t.RegisterChannel(channel)
 		if err != nil {
@@ -203,8 +208,38 @@ commitLoop:
 	}
 
 
-	// wait for commit message,
-	// when enough, send back reply channel
+	replyThreshold := int(math.Ceil(float64(pbft.nNodes) * (float64(2)/float64(3)))) -1// TODO +1 ??
+	receivedReplies := 0
+
+	if pbft.IsRoot() {
+replyLoop:
+		for  i := 0; i <= replyThreshold - 1; i++  {
+			//var digest []byte
+			select {
+			case reply, channelOpen := <-pbft.ChannelReply:
+				if !channelOpen {
+					return nil
+				}
+				receivedReplies++
+				log.Lvl3("Leader got one reply, total is", receivedReplies)
+
+				_ = reply
+				
+			case <-time.After(defaultTimeout * 2):
+				// wait a bit longer than the protocol timeout
+				log.Lvl3("didn't get reply in time")
+				break replyLoop
+			}
+		}
+
+		pbft.FinalReply <- digest[:]
+
+	} else {
+		err := pbft.SendToParent(&Reply{Result:digest[:]})
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -216,6 +251,7 @@ func (pbft *PbftProtocol) Shutdown() error {
 		close(pbft.ChannelPrePrepare)
 		close(pbft.ChannelPrepare)
 		close(pbft.ChannelCommit)
+		close(pbft.ChannelReply)
 	})
 	return nil
 }
