@@ -10,12 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/dedis/kyber.v2/suites"
+	//"gopkg.in/dedis/kyber.v2/suites"
 	"gopkg.in/dedis/onet.v2"
 	"gopkg.in/dedis/onet.v2/log"
+
+	//"gopkg.in/dedis/kyber.v2/sign/schnorr"
+	"gopkg.in/dedis/kyber.v2/group/edwards25519"
+	//"gopkg.in/dedis/kyber.v2/sign/eddsa"
 )
 
-var tSuite = suites.MustFind("Ed25519")
+var tSuite = edwards25519.NewBlakeSHA256Ed25519() // suites.MustFind("Ed25519")
 /*
 func TestMain(m *testing.M) {
 	log.MainTest(m)

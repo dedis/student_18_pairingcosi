@@ -20,16 +20,16 @@ import (
 	"gopkg.in/dedis/onet.v2"
 	"gopkg.in/dedis/onet.v2/log"
 	"gopkg.in/dedis/onet.v2/network"
+	"gopkg.in/dedis/kyber.v2/sign/schnorr"
+	//"gopkg.in/dedis/kyber.v2/group/edwards25519"
+	//"gopkg.in/dedis/kyber.v2/sign/eddsa"
 
 	"crypto/sha512"
 )
 
 func init() {
 	log.SetDebugVisible(3)
-	network.RegisterMessage(PrePrepare{})
-	network.RegisterMessage(Prepare{})
-	network.RegisterMessage(Commit{})
-	network.RegisterMessage(Reply{})
+	network.RegisterMessages(PrePrepare{}, Prepare{}, Commit{}, Reply{})
 	onet.GlobalProtocolRegister(DefaultProtocolName, NewProtocol)
 }
 
@@ -67,7 +67,7 @@ func NewProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		TreeNodeInstance: 	n,
 		nNodes: 			n.Tree().Size(),
 		startChan:       	make(chan bool, 1),
-		FinalReply:   	make(chan []byte, 1),
+		FinalReply:   		make(chan []byte, 1),
 	}
 
 	for _, channel := range []interface{}{
@@ -81,12 +81,7 @@ func NewProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 			return nil, errors.New("couldn't register channel: " + err.Error())
 		}
 	}
-	/*
-	err := c.RegisterHandler(c.HandleStop)
-	if err != nil {
-		return nil, errors.New("couldn't register stop handler: " + err.Error())
-	}
-	*/
+
 	return t, nil
 }
 
@@ -96,8 +91,6 @@ func (pbft *PbftProtocol) Start() error {
 
 	log.Lvl3("Starting PbftProtocol")
 	
-	//pbft.startChan <- true
-
 	return nil
 }
 
@@ -108,8 +101,14 @@ func (pbft *PbftProtocol) Dispatch() error {
 	if pbft.IsRoot() {
 		// send pre-prepare phase
 		digest := sha512.Sum512(pbft.Msg) // TODO digest is correct?
+
+		sig, err := schnorr.Sign(pbft.Suite(), pbft.Private(), pbft.Msg)
+		if err != nil {
+			return err
+		}
+
 		go func() {
-			if errs := pbft.SendToChildrenInParallel(&PrePrepare{Msg:pbft.Msg, Digest:digest[:]}); len(errs) > 0 {
+			if errs := pbft.SendToChildrenInParallel(&PrePrepare{Msg:pbft.Msg, Digest:digest[:], Sig:sig}); len(errs) > 0 {
 				log.Lvl3(pbft.ServerIdentity(), "failed to send pre-prepare to all children")
 			}
 		}()
@@ -124,17 +123,25 @@ func (pbft *PbftProtocol) Dispatch() error {
 
 		// verify
 		digest := sha512.Sum512(preprepare.Msg)
-
 		if !bytes.Equal(digest[:], preprepare.Digest) {
 			log.Lvl3(pbft.ServerIdentity(), "received pre-prepare digest is not correct")
 		}
+
+		sig := schnorr.Verify(pbft.Suite(), pbft.Public)
+
+
+
+		// Sign message and broadcast
+		ownSig, err := schnorr.Sign(pbft.Suite(), pbft.Private(), preprepare.Msg)
+		if err != nil {
+			return err
+		}
 		
 		// broadcast Prepare message to all nodes
-		if errs := pbft.Broadcast(&Prepare{Digest:digest[:]}); len(errs) > 0 {
+		if errs := pbft.Broadcast(&Prepare{Digest:digest[:], Sig:ownSig}); len(errs) > 0 {
 			log.Lvl3(pbft.ServerIdentity(), "error while broadcasting prepare message")
 
 		}
-		log.Lvl3(pbft.ServerIdentity(), "BROADCAST PREPARE")
 	}
 
 

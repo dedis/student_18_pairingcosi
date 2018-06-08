@@ -7,11 +7,10 @@ import "gopkg.in/dedis/onet.v2"
 const DefaultProtocolName = "PBFT"
 
 
-
-
 type PrePrepare struct {
 	Msg []byte
-	Digest []byte // TODO can remove but ok
+	Digest []byte
+	Sig []byte
 }
 
 type StructPrePrepare struct {
@@ -19,8 +18,10 @@ type StructPrePrepare struct {
 	PrePrepare
 }
 
+
 type Prepare struct {
 	Digest []byte
+	Sig []byte
 }
 
 type StructPrepare struct {
@@ -28,8 +29,10 @@ type StructPrepare struct {
 	Prepare
 }
 
+
 type Commit struct {
 	Digest []byte
+	Sig []byte
 }
 
 type StructCommit struct {
@@ -37,15 +40,13 @@ type StructCommit struct {
 	Commit
 }
 
-// Reply returns the count of all children.
+
 type Reply struct {
 	Result []byte
+	Sig []byte
 }
 
-// StructReply just contains Reply and the data necessary to identify and
-// process the message in the sda framework.
 type StructReply struct {
 	*onet.TreeNode
 	Reply
 }
-

@@ -338,5 +338,3 @@ func (p *BlsFtCosi) startSubProtocol(tree *onet.Tree) (*SubBlsFtCosi, error) {
 
 	return cosiSubProtocol, err
 }
-
-
