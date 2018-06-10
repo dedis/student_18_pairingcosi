@@ -16,10 +16,12 @@ import (
 	"time"
 	"bytes"
 	"math"
+	"fmt"
 
 	"gopkg.in/dedis/onet.v2"
 	"gopkg.in/dedis/onet.v2/log"
 	"gopkg.in/dedis/onet.v2/network"
+	"gopkg.in/dedis/kyber.v2"
 	"gopkg.in/dedis/kyber.v2/sign/schnorr"
 	//"gopkg.in/dedis/kyber.v2/group/edwards25519"
 	//"gopkg.in/dedis/kyber.v2/sign/eddsa"
@@ -49,6 +51,7 @@ type PbftProtocol struct {
 	stoppedOnce    		sync.Once
 	verificationFn  	VerificationFn
 	Timeout 			time.Duration
+	PubKeysMap			map[string]kyber.Point
 
 	ChannelPrePrepare   chan StructPrePrepare
 	ChannelPrepare 		chan StructPrepare
@@ -63,11 +66,19 @@ var _ onet.ProtocolInstance = (*PbftProtocol)(nil)
 
 // NewProtocol initialises the structure for use in one round
 func NewProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
+
+	pubKeysMap := make(map[string]kyber.Point) // edwards25519.point
+	for _, node := range n.Tree().List() {
+		fmt.Println(node.ServerIdentity, node.ServerIdentity.Public, node.ServerIdentity.ID.String())
+		pubKeysMap[node.ServerIdentity.ID.String()] = node.ServerIdentity.Public
+	}
+
 	t := &PbftProtocol{
 		TreeNodeInstance: 	n,
 		nNodes: 			n.Tree().Size(),
 		startChan:       	make(chan bool, 1),
 		FinalReply:   		make(chan []byte, 1),
+		PubKeysMap:			pubKeysMap,
 	}
 
 	for _, channel := range []interface{}{
@@ -98,7 +109,11 @@ func (pbft *PbftProtocol) Dispatch() error {
 
 	log.Lvl3(pbft.ServerIdentity(), "------------------- Started node")
 
+	nRepliesThreshold := int(math.Ceil(float64(pbft.nNodes - 1 ) * (float64(2)/float64(3)))) + 1
+
+	var futureDigest []byte
 	if pbft.IsRoot() {
+
 		// send pre-prepare phase
 		digest := sha512.Sum512(pbft.Msg) // TODO digest is correct?
 
@@ -108,10 +123,13 @@ func (pbft *PbftProtocol) Dispatch() error {
 		}
 
 		go func() {
-			if errs := pbft.SendToChildrenInParallel(&PrePrepare{Msg:pbft.Msg, Digest:digest[:], Sig:sig}); len(errs) > 0 {
+			if errs := pbft.SendToChildrenInParallel(&PrePrepare{Msg:pbft.Msg, Digest:digest[:], Sig:sig, Sender:pbft.ServerIdentity().ID.String()}); len(errs) > 0 {
 				log.Lvl3(pbft.ServerIdentity(), "failed to send pre-prepare to all children")
 			}
 		}()
+
+		futureDigest = digest[:]
+
 	} else {
 		// wait for pre-prepare message from leader
 		log.Lvl3("Waiting for preprepare")
@@ -121,116 +139,121 @@ func (pbft *PbftProtocol) Dispatch() error {
 		}
 		log.Lvl3(pbft.ServerIdentity(), "Received PrePrepare. Verifying...")
 
-		// verify
+		// Verify the signature for authentication
+		err := schnorr.Verify(pbft.Suite(), pbft.PubKeysMap[preprepare.Sender], preprepare.Msg, preprepare.Sig)
+		if err != nil {
+			return err
+		}
+
+		// verify message digest
 		digest := sha512.Sum512(preprepare.Msg)
 		if !bytes.Equal(digest[:], preprepare.Digest) {
 			log.Lvl3(pbft.ServerIdentity(), "received pre-prepare digest is not correct")
 		}
 
-		sig := schnorr.Verify(pbft.Suite(), pbft.Public)
-
-
-
-		// Sign message and broadcast
-		ownSig, err := schnorr.Sign(pbft.Suite(), pbft.Private(), preprepare.Msg)
-		if err != nil {
-			return err
-		}
-		
-		// broadcast Prepare message to all nodes
-		if errs := pbft.Broadcast(&Prepare{Digest:digest[:], Sig:ownSig}); len(errs) > 0 {
-			log.Lvl3(pbft.ServerIdentity(), "error while broadcasting prepare message")
-
-		}
+		futureDigest = preprepare.Digest
 	}
 
-
-	// wait for at least 2/3rds prepare broadcat messages
-	t := time.After(defaultTimeout * 2)
-	responseThreshold := int(math.Ceil(float64(pbft.nNodes - 2) * (float64(2)/float64(3))))
-
-	nReceivedPrepareMessages := 0
-
-	nMaxWaitMessages := pbft.nNodes - 2 // total tree nodes minus leader and itself
-	if pbft.IsRoot() {
-		nMaxWaitMessages = pbft.nNodes - 1 // Except for the leader
+	// Sign message and broadcast
+	signedDigest, err := schnorr.Sign(pbft.Suite(), pbft.Private(), futureDigest)
+	if err != nil {
+		return err
 	}
 	
+	// broadcast Prepare message to all nodes
+	if errs := pbft.Broadcast(&Prepare{Digest:futureDigest, Sig:signedDigest, Sender:pbft.ServerIdentity().ID.String()}); len(errs) > 0 {
+		log.Lvl3(pbft.ServerIdentity(), "error while broadcasting prepare message")
+	}
+
+	t := time.After(defaultTimeout * 2)
+	nReceivedPrepareMessages := 0
+	
 loop:
-	for  i := 0; i <= nMaxWaitMessages - 1; i++  {
+	for  i := 0; i <= nRepliesThreshold - 1; i++  {
 		select {
 		case prepare, channelOpen := <-pbft.ChannelPrepare:
 			if !channelOpen {
 				return nil
 			}
-			_ = prepare
+			// Verify the signature for authentication
+			err := schnorr.Verify(pbft.Suite(), pbft.PubKeysMap[prepare.Sender], prepare.Digest, prepare.Sig)
+			if err != nil {
+				return err
+			}
+
 			nReceivedPrepareMessages++
 		case <-t:
 			// TODO
-			log.Lvl3(pbft.ServerIdentity(), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 			break loop
-		}
-		
+		}	
 	}
 
-	if !(nReceivedPrepareMessages >= responseThreshold) {
-		log.Lvl3(pbft.ServerIdentity(), "node didn't receive enough prepare messages. Stopping.")
-		return nil
+	if !(nReceivedPrepareMessages >= nRepliesThreshold) {
+		errors.New("node didn't receive enough prepare messages. Stopping.")
 	} else {
-		log.Lvl3(pbft.ServerIdentity(), "================================ Received enough prepare messages (> 2/3)")
+		log.Lvl3(pbft.ServerIdentity(), "================================ Received enough prepare messages (> 2/3 + 1):", nReceivedPrepareMessages, "/", pbft.nNodes)
 	}
 
+	//digest := sha512.Sum512(pbft.Msg)
 
-
-	digest := sha512.Sum512(pbft.Msg)
+	// Sign message and broadcast
+	signedDigest2, err := schnorr.Sign(pbft.Suite(), pbft.Private(), futureDigest)
+	if err != nil {
+		return err
+	}
 
 	// Broadcast commit message
-	if errs := pbft.Broadcast(&Commit{Digest:digest[:]}); len(errs) > 0 {
+	if errs := pbft.Broadcast(&Commit{Digest:futureDigest, Sender:pbft.ServerIdentity().ID.String(), Sig:signedDigest2}); len(errs) > 0 {
 		log.Lvl3(pbft.ServerIdentity(), "error while broadcasting commit message")
 	}
 
 	nReceivedCommitMessages := 0
 
 commitLoop:
-	for  i := 0; i <= nMaxWaitMessages - 1; i++  {
+	for  i := 0; i <= nRepliesThreshold - 1; i++  {
 		select {
 		case commit, channelOpen := <-pbft.ChannelCommit:
 			if !channelOpen {
 				return nil
 			}
-			_ = commit
+
+			// Verify the signature for authentication
+			err := schnorr.Verify(pbft.Suite(), pbft.PubKeysMap[commit.Sender], commit.Digest, commit.Sig)
+			if err != nil {
+				return err
+			}
 			nReceivedCommitMessages++
 		case <-t:
 			// TODO
-			log.Lvl3(pbft.ServerIdentity(), "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy")
 			break commitLoop
 		}
 	}
 
-	if !(nReceivedCommitMessages >= responseThreshold) {
-		log.Lvl3(pbft.ServerIdentity(), "node didn't receive enough commit messages. Stopping.")
-		return nil
+	if !(nReceivedCommitMessages >= nRepliesThreshold) {
+		return errors.New("node didn't receive enough commit messages. Stopping.")
 	} else {
-		log.Lvl3(pbft.ServerIdentity(), "#################################### Received enough commit messages (> 2/3)")
+		log.Lvl3(pbft.ServerIdentity(), "#################################### Received enough commit messages (> 2/3 + 1):", nReceivedCommitMessages, "/", pbft.nNodes)
 	}
 
-
-	replyThreshold := int(math.Ceil(float64(pbft.nNodes) * (float64(2)/float64(3)))) -1// TODO +1 ??
 	receivedReplies := 0
 
 	if pbft.IsRoot() {
 replyLoop:
-		for  i := 0; i <= replyThreshold - 1; i++  {
-			//var digest []byte
+		for  i := 0; i <= nRepliesThreshold - 1; i++  {
 			select {
 			case reply, channelOpen := <-pbft.ChannelReply:
 				if !channelOpen {
 					return nil
 				}
-				receivedReplies++
-				log.Lvl3("Leader got one reply, total is", receivedReplies)
 
-				_ = reply
+				// Verify the signature for authentication
+				err := schnorr.Verify(pbft.Suite(), pbft.PubKeysMap[reply.Sender], reply.Result, reply.Sig)
+				if err != nil {
+					return err
+				}
+
+				receivedReplies++
+				log.Lvl3("Leader got one reply, total received is now", receivedReplies, "out of", nRepliesThreshold, "needed.")
 				
 			case <-time.After(defaultTimeout * 2):
 				// wait a bit longer than the protocol timeout
@@ -239,10 +262,10 @@ replyLoop:
 			}
 		}
 
-		pbft.FinalReply <- digest[:]
+		pbft.FinalReply <- futureDigest[:]
 
 	} else {
-		err := pbft.SendToParent(&Reply{Result:digest[:]})
+		err := pbft.SendToParent(&Reply{Result:futureDigest, Sender:pbft.ServerIdentity().ID.String(), Sig:signedDigest})
 		if err != nil {
 			return err
 		}
@@ -250,7 +273,6 @@ replyLoop:
 
 	return nil
 }
-
 
 // Shutdown stops the protocol
 func (pbft *PbftProtocol) Shutdown() error {
@@ -262,12 +284,3 @@ func (pbft *PbftProtocol) Shutdown() error {
 	})
 	return nil
 }
-
-
-
-// TODO
-// How to hash to create Digest?
-// What variables are important?
-// e.g. Timeout in children? How to set?
-// Do we have to wait for all nodes to ok prepare step? Or can go directly to commit step when prepare is ok?
-// In paper, d =? D(m)

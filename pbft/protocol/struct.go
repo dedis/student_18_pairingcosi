@@ -11,6 +11,7 @@ type PrePrepare struct {
 	Msg []byte
 	Digest []byte
 	Sig []byte
+	Sender string
 }
 
 type StructPrePrepare struct {
@@ -22,6 +23,7 @@ type StructPrePrepare struct {
 type Prepare struct {
 	Digest []byte
 	Sig []byte
+	Sender string
 }
 
 type StructPrepare struct {
@@ -33,6 +35,7 @@ type StructPrepare struct {
 type Commit struct {
 	Digest []byte
 	Sig []byte
+	Sender string
 }
 
 type StructCommit struct {
@@ -44,6 +47,7 @@ type StructCommit struct {
 type Reply struct {
 	Result []byte
 	Sig []byte
+	Sender string
 }
 
 type StructReply struct {
