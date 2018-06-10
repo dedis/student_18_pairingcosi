@@ -47,7 +47,6 @@ type PbftProtocol struct {
 	ChannelCommit		chan StructCommit
 	ChannelReply		chan StructReply
 
-
 }
 
 // Check that *PbftProtocol implements onet.ProtocolInstance
@@ -56,7 +55,7 @@ var _ onet.ProtocolInstance = (*PbftProtocol)(nil)
 // NewProtocol initialises the structure for use in one round
 func NewProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 
-	pubKeysMap := make(map[string]kyber.Point) // edwards25519.point
+	pubKeysMap := make(map[string]kyber.Point)
 	for _, node := range n.Tree().List() {
 		fmt.Println(node.ServerIdentity, node.ServerIdentity.Public, node.ServerIdentity.ID.String())
 		pubKeysMap[node.ServerIdentity.ID.String()] = node.ServerIdentity.Public
@@ -99,6 +98,7 @@ func (pbft *PbftProtocol) Dispatch() error {
 	log.Lvl3(pbft.ServerIdentity(), "Started node")
 
 	nRepliesThreshold := int(math.Ceil(float64(pbft.nNodes - 1 ) * (float64(2)/float64(3)))) + 1
+	nRepliesThreshold = min(nRepliesThreshold, pbft.nNodes - 1)
 
 	var futureDigest []byte
 	if pbft.IsRoot() {
@@ -272,4 +272,12 @@ func (pbft *PbftProtocol) Shutdown() error {
 		close(pbft.ChannelReply)
 	})
 	return nil
+}
+
+
+func min(a, b int) int {
+    if a < b {
+        return a
+    }
+    return b
 }
