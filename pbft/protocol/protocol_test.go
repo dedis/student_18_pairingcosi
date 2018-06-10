@@ -34,7 +34,7 @@ func TestNode(t *testing.T) {
 
 	proposal := []byte("dedis")
 	defaultTimeout := 5 * time.Second
-	nodes := []int{9} // []int{2, 5, 13}
+	nodes := []int{100} // []int{2, 5, 13}
 
 	for _, nbrNodes := range nodes {
 		local := onet.NewLocalTest(tSuite)
@@ -67,11 +67,13 @@ func TestNode(t *testing.T) {
 
 		select {
 		case finalReply := <-protocol.FinalReply:
-			log.Lvl3("============================ Leader sent final reply")
+			log.Lvl3("Leader sent final reply")
 			_ = finalReply
 		case <-time.After(defaultTimeout * 2):
 			t.Fatal("Leader never got enough final replies, timed out")
 		}
+
+		//local.CloseAll()
 
 	}
 }

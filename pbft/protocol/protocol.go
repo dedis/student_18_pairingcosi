@@ -1,14 +1,5 @@
 package protocol
 
-/*
-The `NewProtocol` method is used to define the protocol and to register
-the handlers that will be called if a certain type of message is received.
-The handlers will be treated according to their signature.
-
-The protocol-file defines the actions that the protocol needs to do in each
-step. The root-node will call the `Start`-method of the protocol. Each
-node will only use the `Handle`-methods, and not call `Start` again.
-*/
 
 import (
 	"errors"
@@ -23,8 +14,6 @@ import (
 	"gopkg.in/dedis/onet.v2/network"
 	"gopkg.in/dedis/kyber.v2"
 	"gopkg.in/dedis/kyber.v2/sign/schnorr"
-	//"gopkg.in/dedis/kyber.v2/group/edwards25519"
-	//"gopkg.in/dedis/kyber.v2/sign/eddsa"
 
 	"crypto/sha512"
 )
@@ -107,7 +96,7 @@ func (pbft *PbftProtocol) Start() error {
 
 func (pbft *PbftProtocol) Dispatch() error {
 
-	log.Lvl3(pbft.ServerIdentity(), "------------------- Started node")
+	log.Lvl3(pbft.ServerIdentity(), "Started node")
 
 	nRepliesThreshold := int(math.Ceil(float64(pbft.nNodes - 1 ) * (float64(2)/float64(3)))) + 1
 
@@ -191,7 +180,7 @@ loop:
 	if !(nReceivedPrepareMessages >= nRepliesThreshold) {
 		errors.New("node didn't receive enough prepare messages. Stopping.")
 	} else {
-		log.Lvl3(pbft.ServerIdentity(), "================================ Received enough prepare messages (> 2/3 + 1):", nReceivedPrepareMessages, "/", pbft.nNodes)
+		log.Lvl3(pbft.ServerIdentity(), "Received enough prepare messages (> 2/3 + 1):", nReceivedPrepareMessages, "/", pbft.nNodes)
 	}
 
 	//digest := sha512.Sum512(pbft.Msg)
@@ -232,7 +221,7 @@ commitLoop:
 	if !(nReceivedCommitMessages >= nRepliesThreshold) {
 		return errors.New("node didn't receive enough commit messages. Stopping.")
 	} else {
-		log.Lvl3(pbft.ServerIdentity(), "#################################### Received enough commit messages (> 2/3 + 1):", nReceivedCommitMessages, "/", pbft.nNodes)
+		log.Lvl3(pbft.ServerIdentity(), "Received enough commit messages (> 2/3 + 1):", nReceivedCommitMessages, "/", pbft.nNodes)
 	}
 
 	receivedReplies := 0
