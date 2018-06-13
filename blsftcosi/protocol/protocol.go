@@ -50,7 +50,7 @@ type BlsFtCosi struct {
 
 // CreateProtocolFunction is a function type which creates a new protocol
 // used in FtCosi protocol for creating sub leader protocols.
-type CreateProtocolFunction func(name string, t *onet.Tree) (onet.ProtocolInstance, error)
+type CreateProtocolFunction func(name string, t *onet.Tree, sid onet.ServiceID) (onet.ProtocolInstance, error)
 
 
 // NewFtCosi method is used to define the ftcosi protocol.
@@ -320,7 +320,7 @@ func (p *BlsFtCosi) Start() error {
 // and returns the started protocol.
 func (p *BlsFtCosi) startSubProtocol(tree *onet.Tree) (*SubBlsFtCosi, error) {
 
-	pi, err := p.CreateProtocol(p.subProtocolName, tree)
+	pi, err := p.CreateProtocol(p.subProtocolName, tree, onet.NilServiceID)
 	if err != nil {
 		return nil, err
 	}
