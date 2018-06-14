@@ -12,6 +12,7 @@ import (
 
 var tSuite = edwards25519.NewBlakeSHA256Ed25519()
 
+
 func TestNode(t *testing.T) {
 
 	proposal := []byte("dedis")
