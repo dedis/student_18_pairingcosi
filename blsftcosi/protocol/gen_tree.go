@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	//"bls-ftcosi/onet"
-	"gopkg.in/dedis/onet.v2"
-	"gopkg.in/dedis/onet.v2/network"
+	"github.com/dedis/onet"
+	"github.com/dedis/onet/network"
 )
 
 // genTrees will create a given number of subtrees of the same number of nodes.

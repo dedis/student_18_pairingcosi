@@ -1,46 +1,40 @@
 package main
 
-/*
-The simulation-file can be used with the `cothority/simul` and be run either
-locally or on deterlab. Contrary to the `test` of the protocol, the simulation
-is much more realistic, as it tests the protocol on different nodes, and not
-only in a test-environment.
-
-The Setup-method is run once on the client and will create all structures
-and slices necessary to the simulation. It also receives a 'dir' argument
-of a directory where it can write files. These files will be copied over to
-the simulation so that they are available.
-
-The Run-method is called only once by the root-node of the tree defined in
-Setup. It should run the simulation in different rounds. It can also
-measure the time each run takes.
-
-In the Node-method you can read the files that have been created by the
-'Setup'-method.
-*/
 
 import (
-	//"errors"
-	//"strconv"
 	"time"
 	"fmt"
 
 	"github.com/BurntSushi/toml"
-	//"github.com/dedis/cothority_template/protocol"
-	"gopkg.in/dedis/onet.v2"
-	"gopkg.in/dedis/onet.v2/log"
-	//"gopkg.in/dedis/onet.v2/simul/monitor"
-	"gopkg.in/dedis/kyber.v2"
+	"github.com/dedis/onet"
+	"github.com/dedis/onet/log"
+	"github.com/dedis/onet/simul/monitor"
+	"github.com/dedis/kyber"
 	"bls-ftcosi/blsftcosi/protocol"
+	"github.com/dedis/cothority"
+	"github.com/dedis/kyber/pairing"
+	"github.com/dedis/kyber/pairing/bn256"
 )
 
 func init() {
 	onet.SimulationRegister("BlsFtCosiProtocol", NewSimulationProtocol)
+
+	cothority.Suite = struct{
+	    pairing.Suite
+	    kyber.Group
+	}{
+	    Suite: bn256.NewSuite(),
+	    Group: bn256.NewSuiteG2(),
+	}
 }
 
 // SimulationProtocol implements onet.Simulation.
 type SimulationProtocol struct {
 	onet.SimulationBFTree
+	NNodes				int
+	NSubtrees			int
+	FailingSubleaders	int
+	FailingLeafs		int
 }
 
 // NewSimulationProtocol is used internally to register the simulation (see the init()
@@ -80,72 +74,56 @@ func (s *SimulationProtocol) Node(config *onet.SimulationConfig) error {
 }
 
 var defaultTimeout = 5 * time.Second
+var proposal = []byte("dedis")
 
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 	size := config.Tree.Size()
-	log.Lvl2("Size is:", size, "rounds:", s.Rounds)
+	log.Lvl1("Size is:", size, "rounds:", s.Rounds)
+	log.Lvl1("Simulating for", s.Hosts, "nodes and", s.NSubtrees, "subtrees in ", s.Rounds, "round")
 	for round := 0; round < s.Rounds; round++ {
-		log.Lvl1("Starting round", round)
-		/*
+
 		round := monitor.NewTimeMeasure("round")
-		p, err := config.Overlay.CreateProtocol("Template", config.Tree,
-			onet.NilServiceID)
+
+		// get public keys
+		publics := make([]kyber.Point, config.Tree.Size())
+		for i, node := range config.Tree.List() {
+			publics[i] = node.ServerIdentity.Public
+		}
+
+		pi, err := config.Overlay.CreateProtocol("blsftCoSiProtoDefault", config.Tree, onet.NilServiceID)
 		if err != nil {
 			return err
 		}
-		go p.Start()
-		children := <-p.(*protocol.TemplateProtocol).ChildCount
-		round.Record()
-		if children != size {
-			return errors.New("Didn't get " + strconv.Itoa(size) +
-				" children")
+		cosiProtocol := pi.(*protocol.BlsFtCosi)
+		cosiProtocol.CreateProtocol = config.Overlay.CreateProtocol
+		cosiProtocol.Msg = proposal
+		cosiProtocol.NSubtrees = s.NSubtrees
+		cosiProtocol.Timeout = defaultTimeout
+
+		err = cosiProtocol.Start()
+		if err != nil {
+			return err
+		}
+
+		select {
+		case _ = <-cosiProtocol.FinalSignature:
+			log.Lvl3("Instance is done")
+			round.Record()
+		case <-time.After(defaultTimeout * 2):
+			// wait a bit longer than the protocol timeout
+			return fmt.Errorf("didn't get commitment in time")
+		}
+
+		/*
+		err = getAndVerifySignature(cosiProtocol, publics, proposal, protocol.CompletePolicy{})
+		if err != nil {
+			return err
 		}
 		*/
 
-		nodes :=  []int{4} // []int{1, 2, 5, 13, 24}
-		subtrees := []int{1} // []int{1, 2, 5, 9}
-		proposal := []byte("dedis") //[]byte{0xFF}
-
-		for _, nNodes := range nodes {
-			for _, nSubtrees := range subtrees {
-				log.Lvl2("test asking for", nNodes, "nodes and", nSubtrees, "subtrees")
-
-				//local := onet.NewLocalTest(testSuite) // TODO pointer?
-				//_, _, tree := local.GenTree(nNodes, false)
-
-				// get public keys
-				publics := make([]kyber.Point, config.Tree.Size())
-				for i, node := range config.Tree.List() {
-					publics[i] = node.ServerIdentity.Public
-				}
-
-				pi, err := config.Overlay.CreateProtocol("blsftCoSiProtoDefault", config.Tree, onet.NilServiceID)
-				if err != nil {
-					//local.CloseAll()
-					return err
-				}
-				cosiProtocol := pi.(*protocol.BlsFtCosi)
-				cosiProtocol.CreateProtocol = config.Overlay.CreateProtocol
-				cosiProtocol.Msg = proposal
-				cosiProtocol.NSubtrees = nSubtrees
-				cosiProtocol.Timeout = defaultTimeout
-
-				err = cosiProtocol.Start()
-				if err != nil {
-					return err
-				}
-
-				// get and verify signature
-				err = getAndVerifySignature(cosiProtocol, publics, proposal, protocol.CompletePolicy{})
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-
 	}
+
 	return nil
 }
 
@@ -161,16 +139,15 @@ func getAndVerifySignature(cosiProtocol *protocol.BlsFtCosi, publics []kyber.Poi
 		return fmt.Errorf("didn't get commitment in time")
 	}
 
-	return nil // verifySignature(signature, publics, proposal, policy)
+	return verifySignature(cosiProtocol.PairingSuite, signature, publics, proposal, policy)
 }
 
-/*
-func verifySignature(signature []byte, publics []kyber.Point,
-	proposal []byte, policy protocol.Policy) error {
+
+func verifySignature(ps pairing.Suite, signature []byte, publics []kyber.Point, proposal []byte, policy protocol.Policy) error {
 	// verify signature
 
 	
-	err := protocol.Verify(testSuite, publics, proposal, signature, policy)
+	err := protocol.Verify(ps, publics, proposal, signature, policy)
 	if err != nil {
 		return fmt.Errorf("didn't get a valid signature: %s", err)
 	}
@@ -178,4 +155,3 @@ func verifySignature(signature []byte, publics []kyber.Point,
 	log.Lvl2("Signature correctly verified!")
 	return nil
 }
-*/

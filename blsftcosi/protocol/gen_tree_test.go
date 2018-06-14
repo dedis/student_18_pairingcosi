@@ -9,8 +9,8 @@ protocol, as in Test Driven Development.
 import (
 	"testing"
 
-	"gopkg.in/dedis/onet.v2"
-	"gopkg.in/dedis/onet.v2/network"
+	"github.com/dedis/onet"
+	"github.com/dedis/onet/network"
 )
 
 // tests the root of the trees

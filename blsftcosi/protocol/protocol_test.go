@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/dedis/kyber.v2"
-	"gopkg.in/dedis/onet.v2"
-	"gopkg.in/dedis/onet.v2/log"
-	"gopkg.in/dedis/kyber.v2/pairing"
+	"github.com/dedis/kyber"
+	"github.com/dedis/onet"
+	"github.com/dedis/onet/log"
+	"github.com/dedis/kyber/pairing"
 	//"github.com/stretchr/testify/require"
 
 )
@@ -67,7 +67,7 @@ func TestMain(m *testing.M) {
 */
 
 
-/*
+
 // Tests various trees configurations
 func TestProtocol(t *testing.T) {
 	// TODO doesn't work with 1 subtree and 5 or more nodes (works for 1 to 4 nodes)
@@ -116,7 +116,7 @@ func TestProtocol(t *testing.T) {
 		}
 	}
 }
-
+/*
 
 
 // Tests unresponsive leaves in various tree configurations
@@ -321,7 +321,7 @@ func TestProtocolErrors(t *testing.T) {
 	}
 }
 */
-
+/*
 func TestProtocolRefusalAll(t *testing.T) {
 	// TODO with 4 nodes passes, with 5 nodes and 1 subtree fails! (i.e. when there are 3 brother leaves)
 	nodes :=  []int{4, 5, 13}
@@ -392,6 +392,7 @@ func TestProtocolRefusalAll(t *testing.T) {
 		}
 	}
 }
+*/
 
 
 

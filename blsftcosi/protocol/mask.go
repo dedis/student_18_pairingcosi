@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"gopkg.in/dedis/kyber.v2"
-	"gopkg.in/dedis/kyber.v2/pairing"
-	"gopkg.in/dedis/onet.v2/log"
+	"github.com/dedis/kyber"
+	"github.com/dedis/kyber/pairing"
+	"github.com/dedis/onet/log"
 
 )
 

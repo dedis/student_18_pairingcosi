@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/dedis/kyber.v2"
-	"gopkg.in/dedis/onet.v2"
-	"gopkg.in/dedis/onet.v2/log"
-	"gopkg.in/dedis/kyber.v2/pairing"
-	"gopkg.in/dedis/kyber.v2/pairing/bn256"
+	"github.com/dedis/kyber"
+	"github.com/dedis/onet"
+	"github.com/dedis/onet/log"
+	"github.com/dedis/kyber/pairing"
+	"github.com/dedis/kyber/pairing/bn256"
 
 )
 

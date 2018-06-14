@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"errors"
 
-	"gopkg.in/dedis/kyber.v2"
-	"gopkg.in/dedis/kyber.v2/sign/bls"
-	"gopkg.in/dedis/kyber.v2/pairing"
-	"gopkg.in/dedis/onet.v2"
-	"gopkg.in/dedis/onet.v2/log"
-	"gopkg.in/dedis/onet.v2/network"
+	"github.com/dedis/kyber"
+	"github.com/dedis/kyber/sign/bls"
+	"github.com/dedis/kyber/pairing"
+	"github.com/dedis/onet"
+	"github.com/dedis/onet/log"
+	"github.com/dedis/onet/network"
 )
 
 
@@ -175,20 +175,17 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte, pol
 		fmt.Println("Signature verified and is correct!")
 	}
 
-	
+	/*
 	fmt.Println("******************")
 	fmt.Println(mask)
 	fmt.Println(mask.CountEnabled())
 	fmt.Println(mask.CountTotal())
+	*/
 
 
 	if !policy.Check(mask) {
 		return errors.New("the policy is not fulfilled")
-	} else {
-		fmt.Println("Mask threshold verified and is correct!")
 	}
-
-	// TODO check mask
 
 	return nil
 }

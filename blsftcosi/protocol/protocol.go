@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"sync"
 	"time"
-	"gopkg.in/dedis/onet.v2/network"
-	"gopkg.in/dedis/onet.v2"
-	"gopkg.in/dedis/kyber.v2"
-	"gopkg.in/dedis/onet.v2/log"
-	"gopkg.in/dedis/kyber.v2/pairing"
-	"gopkg.in/dedis/kyber.v2/pairing/bn256"
+	"github.com/dedis/onet/network"
+	"github.com/dedis/onet"
+	"github.com/dedis/kyber"
+	"github.com/dedis/onet/log"
+	"github.com/dedis/kyber/pairing"
+	"github.com/dedis/kyber/pairing/bn256"
 	
 )
 
@@ -44,7 +44,7 @@ type BlsFtCosi struct {
 	startChan       chan bool
 	subProtocolName string
 	verificationFn  VerificationFn
-	pairingSuite 	pairing.Suite
+	PairingSuite 	pairing.Suite
 }
 
 
@@ -70,7 +70,7 @@ func NewBlsFtCosi(n *onet.TreeNodeInstance, vf VerificationFn, subProtocolName s
 		startChan:        make(chan bool, 1),
 		verificationFn:   vf,
 		subProtocolName:  subProtocolName,
-		pairingSuite:     pairingSuite,
+		PairingSuite:     pairingSuite,
 	}	
 
 	return c, nil
@@ -180,7 +180,7 @@ func (p *BlsFtCosi) Dispatch() error {
 	}
 
 	// generate root signature
-	signaturePoint, finalMask, err := generateSignature(p.pairingSuite, p.TreeNodeInstance, p.publics, responses, p.Msg, ok)
+	signaturePoint, finalMask, err := generateSignature(p.PairingSuite, p.TreeNodeInstance, p.publics, responses, p.Msg, ok)
 	if err != nil {
 		return err
 	}
