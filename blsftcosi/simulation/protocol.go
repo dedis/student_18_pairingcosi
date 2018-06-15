@@ -73,7 +73,7 @@ func (s *SimulationProtocol) Node(config *onet.SimulationConfig) error {
 	return s.SimulationBFTree.Node(config)
 }
 
-var defaultTimeout = 5 * time.Second
+var defaultTimeout = 30 * time.Second
 var proposal = []byte("dedis")
 
 // Run implements onet.Simulation.
@@ -83,7 +83,8 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 	log.Lvl1("Simulating for", s.Hosts, "nodes and", s.NSubtrees, "subtrees in ", s.Rounds, "round")
 	for round := 0; round < s.Rounds; round++ {
 
-		round := monitor.NewTimeMeasure("round")
+		roundNoVerify := monitor.NewTimeMeasure("roundNoVerify")
+		fullRound := monitor.NewTimeMeasure("fullRound")
 
 		// get public keys
 		publics := make([]kyber.Point, config.Tree.Size())
@@ -106,22 +107,25 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 			return err
 		}
 
+		var signature []byte
 		select {
-		case _ = <-cosiProtocol.FinalSignature:
+		case signature = <-cosiProtocol.FinalSignature:
 			log.Lvl3("Instance is done")
-			round.Record()
+			roundNoVerify.Record()
 		case <-time.After(defaultTimeout * 2):
 			// wait a bit longer than the protocol timeout
 			return fmt.Errorf("didn't get commitment in time")
 		}
 
-		/*
-		err = getAndVerifySignature(cosiProtocol, publics, proposal, protocol.CompletePolicy{})
+		
+		verificationOnly := monitor.NewTimeMeasure("verificationOnly")
+		err = verifySignature(cosiProtocol.PairingSuite, signature, publics, proposal, protocol.CompletePolicy{})
 		if err != nil {
 			return err
 		}
-		*/
+		verificationOnly.Record()
 
+		fullRound.Record()
 	}
 
 	return nil

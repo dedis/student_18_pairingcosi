@@ -1,7 +1,7 @@
 package protocol
 
 
-import "gopkg.in/dedis/onet.v2"
+import "github.com/dedis/onet"
 
 // Name can be used from other packages to refer to this protocol.
 const DefaultProtocolName = "PBFT"

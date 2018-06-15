@@ -20,23 +20,26 @@ In the Node-method you can read the files that have been created by the
 */
 
 import (
-	"errors"
-	"strconv"
+	"fmt"
+	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/dedis/cothority_template/protocol"
 	"github.com/dedis/onet"
 	"github.com/dedis/onet/log"
-	"github.com/dedis/onet/simul/monitor"
+	//"github.com/dedis/onet/simul/monitor"
+	"bls-ftcosi/pbft/protocol"
 )
 
 func init() {
-	onet.SimulationRegister("TemplateProtocol", NewSimulationProtocol)
+	onet.SimulationRegister("PBFTProtocol", NewSimulationProtocol)
 }
 
 // SimulationProtocol implements onet.Simulation.
 type SimulationProtocol struct {
 	onet.SimulationBFTree
+	NNodes				int
+	FailingSubleaders	int
+	FailingLeafs		int
 }
 
 // NewSimulationProtocol is used internally to register the simulation (see the init()
@@ -75,25 +78,42 @@ func (s *SimulationProtocol) Node(config *onet.SimulationConfig) error {
 	return s.SimulationBFTree.Node(config)
 }
 
+var proposal = []byte("dedis")
+var defaultTimeout = 30 * time.Second
+
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 	size := config.Tree.Size()
-	log.Lvl2("Size is:", size, "rounds:", s.Rounds)
+	log.Lvl1("Size is:", size, "rounds:", s.Rounds)
+	log.Lvl1("Simulating for", s.Hosts, "nodes in ", s.Rounds, "round")
+
 	for round := 0; round < s.Rounds; round++ {
 		log.Lvl1("Starting round", round)
-		round := monitor.NewTimeMeasure("round")
-		p, err := config.Overlay.CreateProtocol("Template", config.Tree,
-			onet.NilServiceID)
+		//round := monitor.NewTimeMeasure("round")
+
+		pi, err := config.Overlay.CreateProtocol("PBFTProtocol", config.Tree, onet.NilServiceID)
 		if err != nil {
 			return err
 		}
-		go p.Start()
-		children := <-p.(*protocol.TemplateProtocol).ChildCount
-		round.Record()
-		if children != size {
-			return errors.New("Didn't get " + strconv.Itoa(size) +
-				" children")
+
+		pbftPprotocol := pi.(*protocol.PbftProtocol)
+		pbftPprotocol.Msg = proposal
+		pbftPprotocol.Timeout = defaultTimeout
+
+		err = pbftPprotocol.Start()
+		if err != nil {
+			return err
 		}
+
+		select {
+		case finalReply := <-pbftPprotocol.FinalReply:
+			log.Lvl1("Leader sent final reply")
+			_ = finalReply
+		case <-time.After(defaultTimeout * 2):
+			fmt.Errorf("Leader never got enough final replies, timed out")
+		}
+
+		//round.Record()
 	}
 	return nil
 }

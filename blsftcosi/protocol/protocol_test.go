@@ -116,7 +116,7 @@ func TestProtocol(t *testing.T) {
 		}
 	}
 }
-/*
+
 
 
 // Tests unresponsive leaves in various tree configurations
@@ -320,8 +320,8 @@ func TestProtocolErrors(t *testing.T) {
 		}
 	}
 }
-*/
-/*
+
+
 func TestProtocolRefusalAll(t *testing.T) {
 	// TODO with 4 nodes passes, with 5 nodes and 1 subtree fails! (i.e. when there are 3 brother leaves)
 	nodes :=  []int{4, 5, 13}
@@ -392,40 +392,7 @@ func TestProtocolRefusalAll(t *testing.T) {
 		}
 	}
 }
-*/
 
-
-
-/*
-
-func TestDummy(t *testing.T) {
-	nNodes := 2
-	proposal := []byte("msg blabla") // 0xFF
-
-	local := onet.NewLocalTest(testSuite)
-	_, _, tree := local.GenTree(nNodes, false)
-
-	pi, err := local.CreateProtocol(DefaultProtocolName, tree)
-	if err != nil {
-		local.CloseAll()
-		t.Fatal("Error in creation of protocol:", err)
-	}
-	cosiProtocol := pi.(*BlsFtCosi)
-	cosiProtocol.CreateProtocol = local.CreateProtocol
-	cosiProtocol.Msg = proposal
-	cosiProtocol.NSubtrees = 1
-	cosiProtocol.Timeout = defaultTimeout
-
-	err = cosiProtocol.Start()
-	if err != nil {
-		local.CloseAll()
-		t.Fatal(err)
-	}
-
-	time.Sleep(time.Second *3)
-
-}
-*/
 
 
 func getAndVerifySignature(cosiProtocol *BlsFtCosi, publics []kyber.Point,
@@ -455,7 +422,6 @@ func verifySignature(signature []byte, publics []kyber.Point,
 	log.Lvl2("Signature correctly verified!")
 	return nil
 }
-
 
 
 type Counter struct {

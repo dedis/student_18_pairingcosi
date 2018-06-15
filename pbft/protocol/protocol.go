@@ -9,11 +9,11 @@ import (
 	"math"
 	"fmt"
 
-	"gopkg.in/dedis/onet.v2"
-	"gopkg.in/dedis/onet.v2/log"
-	"gopkg.in/dedis/onet.v2/network"
-	"gopkg.in/dedis/kyber.v2"
-	"gopkg.in/dedis/kyber.v2/sign/schnorr"
+	"github.com/dedis/onet"
+	"github.com/dedis/onet/log"
+	"github.com/dedis/onet/network"
+	"github.com/dedis/kyber"
+	"github.com/dedis/kyber/sign/schnorr"
 
 	"crypto/sha512"
 )
