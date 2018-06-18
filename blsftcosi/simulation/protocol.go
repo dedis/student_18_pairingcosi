@@ -79,6 +79,7 @@ var proposal = []byte("dedis")
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 	size := config.Tree.Size()
+	thold := size * 2 / 3
 	log.Lvl1("Size is:", size, "rounds:", s.Rounds)
 	log.Lvl1("Simulating for", s.Hosts, "nodes and", s.NSubtrees, "subtrees in ", s.Rounds, "round")
 	for round := 0; round < s.Rounds; round++ {
@@ -119,7 +120,7 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 
 		
 		verificationOnly := monitor.NewTimeMeasure("verificationOnly")
-		err = verifySignature(cosiProtocol.PairingSuite, signature, publics, proposal, protocol.CompletePolicy{})
+		err = verifySignature(cosiProtocol.PairingSuite, signature, publics, proposal, protocol.NewThresholdPolicy(thold))
 		if err != nil {
 			return err
 		}

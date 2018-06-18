@@ -95,7 +95,7 @@ func (pbft *PbftProtocol) Start() error {
 
 func (pbft *PbftProtocol) Dispatch() error {
 
-	log.Lvl3(pbft.ServerIdentity(), "Started node")
+	log.Lvl1(pbft.ServerIdentity(), "Started node")
 
 	nRepliesThreshold := int(math.Ceil(float64(pbft.nNodes - 1 ) * (float64(2)/float64(3)))) + 1
 	nRepliesThreshold = min(nRepliesThreshold, pbft.nNodes - 1)
@@ -121,12 +121,12 @@ func (pbft *PbftProtocol) Dispatch() error {
 
 	} else {
 		// wait for pre-prepare message from leader
-		log.Lvl3("Waiting for preprepare")
+		log.Lvl1(pbft.ServerIdentity(), "Waiting for preprepare")
 		preprepare, channelOpen := <-pbft.ChannelPrePrepare
 		if !channelOpen {
 			return nil
 		}
-		log.Lvl3(pbft.ServerIdentity(), "Received PrePrepare. Verifying...")
+		log.Lvl1(pbft.ServerIdentity(), "Received PrePrepare. Verifying...")
 
 		// Verify the signature for authentication
 		err := schnorr.Verify(pbft.Suite(), pbft.PubKeysMap[preprepare.Sender], preprepare.Msg, preprepare.Sig)

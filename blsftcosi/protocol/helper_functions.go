@@ -12,8 +12,6 @@ import (
 	"github.com/dedis/onet/network"
 )
 
-
-
 // Sign the message with this node and aggregates with all child signatures (in structResponses)
 // Also aggregates the child bitmasks
 func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyber.Point, structResponses []StructResponse,
@@ -49,7 +47,6 @@ func generateSignature(ps pairing.Suite, t *onet.TreeNodeInstance, publics []kyb
 		var found bool
 		for i, p := range publics {
 			if p.Equal(t.Public()) {
-				log.Lvl2("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa ")
 				personalMask.SetBit(i, false)
 				found = true
 			}
@@ -172,15 +169,10 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte, pol
 	if err != nil {
 		return fmt.Errorf("didn't get a valid signature: %s", err)
 	} else {
-		fmt.Println("Signature verified and is correct!")
+		log.Lvl1("Signature verified and is correct!")
 	}
 
-	/*
-	fmt.Println("******************")
-	fmt.Println(mask)
-	fmt.Println(mask.CountEnabled())
-	fmt.Println(mask.CountTotal())
-	*/
+	log.Lvl1("m.CountEnabled():", mask.CountEnabled())
 
 
 	if !policy.Check(mask) {
