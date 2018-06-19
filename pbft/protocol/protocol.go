@@ -7,7 +7,6 @@ import (
 	"time"
 	"bytes"
 	"math"
-	"fmt"
 
 	"github.com/dedis/onet"
 	"github.com/dedis/onet/log"
@@ -57,7 +56,7 @@ func NewProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 
 	pubKeysMap := make(map[string]kyber.Point)
 	for _, node := range n.Tree().List() {
-		fmt.Println(node.ServerIdentity, node.ServerIdentity.Public, node.ServerIdentity.ID.String())
+		//fmt.Println(node.ServerIdentity, node.ServerIdentity.Public, node.ServerIdentity.ID.String())
 		pubKeysMap[node.ServerIdentity.ID.String()] = node.ServerIdentity.Public
 	}
 
@@ -95,7 +94,7 @@ func (pbft *PbftProtocol) Start() error {
 
 func (pbft *PbftProtocol) Dispatch() error {
 
-	log.Lvl1(pbft.ServerIdentity(), "Started node")
+	log.Lvl3(pbft.ServerIdentity(), "Started node")
 
 	nRepliesThreshold := int(math.Ceil(float64(pbft.nNodes - 1 ) * (float64(2)/float64(3)))) + 1
 	nRepliesThreshold = min(nRepliesThreshold, pbft.nNodes - 1)
@@ -121,12 +120,12 @@ func (pbft *PbftProtocol) Dispatch() error {
 
 	} else {
 		// wait for pre-prepare message from leader
-		log.Lvl1(pbft.ServerIdentity(), "Waiting for preprepare")
+		log.Lvl3(pbft.ServerIdentity(), "Waiting for preprepare")
 		preprepare, channelOpen := <-pbft.ChannelPrePrepare
 		if !channelOpen {
 			return nil
 		}
-		log.Lvl1(pbft.ServerIdentity(), "Received PrePrepare. Verifying...")
+		log.Lvl3(pbft.ServerIdentity(), "Received PrePrepare. Verifying...")
 
 		// Verify the signature for authentication
 		err := schnorr.Verify(pbft.Suite(), pbft.PubKeysMap[preprepare.Sender], preprepare.Msg, preprepare.Sig)
@@ -242,7 +241,7 @@ replyLoop:
 				}
 
 				receivedReplies++
-				log.Lvl3("Leader got one reply, total received is now", receivedReplies, "out of", nRepliesThreshold, "needed.")
+				log.Lvl1("Leader got one reply, total received is now", receivedReplies, "out of", nRepliesThreshold, "needed.")
 				
 			case <-time.After(defaultTimeout * 2):
 				// wait a bit longer than the protocol timeout

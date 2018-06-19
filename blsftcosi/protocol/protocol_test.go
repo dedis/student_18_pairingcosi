@@ -22,7 +22,7 @@ const RefuseOneProtocolName = "RefuseOneProtocol"
 const RefuseOneSubProtocolName = "RefuseOneSubProtocol"
 
 func init() {
-	log.SetDebugVisible(4)
+	log.SetDebugVisible(1)
 	GlobalRegisterDefaultProtocols()
 	onet.GlobalProtocolRegister(FailureProtocolName, func(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		vf := func(a, b []byte) bool { return true }

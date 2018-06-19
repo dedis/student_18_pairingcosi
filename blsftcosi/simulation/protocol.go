@@ -93,7 +93,7 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 			publics[i] = node.ServerIdentity.Public
 		}
 
-		pi, err := config.Overlay.CreateProtocol("blsftCoSiProtoDefault", config.Tree, onet.NilServiceID)
+		pi, err := config.Overlay.CreateProtocol(protocol.DefaultProtocolName, config.Tree, onet.NilServiceID)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,6 @@
 Simulation = "PBFTProtocol"
 Servers = 5
-Rounds = 1
+Rounds = 10
 CloseWait = 6000
 Suite = "Ed25519"
 

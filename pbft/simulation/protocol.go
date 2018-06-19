@@ -26,7 +26,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/dedis/onet"
 	"github.com/dedis/onet/log"
-	//"github.com/dedis/onet/simul/monitor"
+	"github.com/dedis/onet/simul/monitor"
 	"bls-ftcosi/pbft/protocol"
 )
 
@@ -83,15 +83,16 @@ var defaultTimeout = 30 * time.Second
 
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
+	log.SetDebugVisible(1)
 	size := config.Tree.Size()
 	log.Lvl1("Size is:", size, "rounds:", s.Rounds)
 	log.Lvl1("Simulating for", s.Hosts, "nodes in ", s.Rounds, "round")
 
 	for round := 0; round < s.Rounds; round++ {
 		log.Lvl1("Starting round", round)
-		//round := monitor.NewTimeMeasure("round")
+		fullRound := monitor.NewTimeMeasure("fullRound")
 
-		pi, err := config.Overlay.CreateProtocol("PBFTProtocol", config.Tree, onet.NilServiceID)
+		pi, err := config.Overlay.CreateProtocol(protocol.DefaultProtocolName, config.Tree, onet.NilServiceID)
 		if err != nil {
 			return err
 		}
@@ -113,7 +114,7 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 			fmt.Errorf("Leader never got enough final replies, timed out")
 		}
 
-		//round.Record()
+		fullRound.Record()
 	}
 	return nil
 }
