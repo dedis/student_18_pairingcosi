@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"encoding/json"
 
 	"github.com/dedis/kyber"
 	"github.com/dedis/onet"
@@ -49,7 +50,16 @@ func init() {
 // NewDefaultSubProtocol is the default sub-protocol function used for registration
 // with an always-true verification.
 func NewDefaultSubProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
-	vf := func(a, b []byte) bool { return true }
+	vf := func(msg, data []byte) bool {
+		// Simulate verification function by sleeping
+		b, _ := json.Marshal(msg)
+		m := time.Duration(len(b) / (500 * 1024))  //verification of 150ms per 500KB simulated
+		waitTime := 150 * time.Millisecond * m
+		log.Lvl1("Verifying for", waitTime)
+		time.Sleep(waitTime)  
+
+		return true 
+	}
 	return NewSubBlsFtCosi(n, vf, bn256.NewSuite())
 }
 
@@ -162,10 +172,7 @@ loop:
 		}
 	}
 
-	// TODO
-	//ok := true
 	var ok bool
-
 
 	if p.IsRoot() {
 		// send response to super-protocol
@@ -190,7 +197,6 @@ loop:
 		if err != nil {
 			return err
 		}
-		log.Lvl3(p.TreeNodeInstance.ServerIdentity().Address, "ZZZZZZZZZZZZZZZZZZZZZZZZ", finalMask.mask)
 
 		tmp, err := PointToByteSlice(p.pairingSuite, signaturePoint)
 
@@ -217,7 +223,6 @@ loop:
 		if err != nil {
 			return err
 		}
-		
 	}
 
 	return nil

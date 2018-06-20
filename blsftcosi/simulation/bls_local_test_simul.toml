@@ -6,4 +6,4 @@ Suite = "bn256.g2"
 Tags = "vartime"
 
 Depth, Hosts, NSubTrees, FailingSubleaders, FailingLeafs
-2, 1, 1, 0, 0
+2, 5, 1, 0, 0
