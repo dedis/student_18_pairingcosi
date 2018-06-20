@@ -7,6 +7,8 @@ import (
 	"time"
 	"bytes"
 	"math"
+	"fmt"
+	"encoding/json"
 
 	"github.com/dedis/onet"
 	"github.com/dedis/onet/log"
@@ -32,6 +34,7 @@ type PbftProtocol struct {
 	*onet.TreeNodeInstance
 
 	Msg					[]byte
+	Data 				[]byte
 	nNodes				int
 
 	FinalReply 			chan []byte
@@ -60,12 +63,25 @@ func NewProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		pubKeysMap[node.ServerIdentity.ID.String()] = node.ServerIdentity.Public
 	}
 
+	vf := func(msg, data []byte) bool {
+		// Simulate verification function by sleeping
+		b, _ := json.Marshal(msg)
+		m := time.Duration(len(b) / (500 * 1024))  //verification of 150ms per 500KB simulated
+		waitTime := 150 * time.Millisecond * m
+		log.Lvl1("Verifying for", waitTime)
+		time.Sleep(waitTime)  
+
+		return true 
+	}
+
 	t := &PbftProtocol{
 		TreeNodeInstance: 	n,
 		nNodes: 			n.Tree().Size(),
 		startChan:       	make(chan bool, 1),
 		FinalReply:   		make(chan []byte, 1),
 		PubKeysMap:			pubKeysMap,
+		Data:            	make([]byte, 0),
+		verificationFn:		vf,
 	}
 
 	for _, channel := range []interface{}{
@@ -99,6 +115,9 @@ func (pbft *PbftProtocol) Dispatch() error {
 	nRepliesThreshold := int(math.Ceil(float64(pbft.nNodes - 1 ) * (float64(2)/float64(3)))) + 1
 	nRepliesThreshold = min(nRepliesThreshold, pbft.nNodes - 1)
 
+	// Verification of the data
+	verifyChan := make(chan bool, 1)
+
 	var futureDigest []byte
 	if pbft.IsRoot() {
 
@@ -126,6 +145,9 @@ func (pbft *PbftProtocol) Dispatch() error {
 			return nil
 		}
 		log.Lvl3(pbft.ServerIdentity(), "Received PrePrepare. Verifying...")
+		go func() {
+			verifyChan <- pbft.verificationFn(pbft.Msg, pbft.Data)
+		}()
 
 		// Verify the signature for authentication
 		err := schnorr.Verify(pbft.Suite(), pbft.PubKeysMap[preprepare.Sender], preprepare.Msg, preprepare.Sig)
@@ -140,6 +162,11 @@ func (pbft *PbftProtocol) Dispatch() error {
 		}
 
 		futureDigest = preprepare.Digest
+
+		ok := <-verifyChan
+		if !ok {
+			return fmt.Errorf("verification failed on node")
+		}
 	}
 
 	// Sign message and broadcast
