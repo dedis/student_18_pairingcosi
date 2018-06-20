@@ -133,7 +133,6 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 	if err != nil {
 		return err
 	}
-	log.Lvl1("klklklk", len(binaryBlock))
 
 	size := config.Tree.Size()
 	thold := size * 2 / 3

@@ -16,6 +16,7 @@ import (
 	"github.com/dedis/kyber"
 	"github.com/dedis/kyber/sign/schnorr"
 
+
 	"crypto/sha512"
 )
 
@@ -146,7 +147,7 @@ func (pbft *PbftProtocol) Dispatch() error {
 		}
 		log.Lvl3(pbft.ServerIdentity(), "Received PrePrepare. Verifying...")
 		go func() {
-			verifyChan <- pbft.verificationFn(pbft.Msg, pbft.Data)
+			verifyChan <- pbft.verificationFn(preprepare.Msg, pbft.Data)
 		}()
 
 		// Verify the signature for authentication
