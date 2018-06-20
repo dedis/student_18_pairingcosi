@@ -4,6 +4,7 @@ package main
 import (
 	"time"
 	"fmt"
+	"errors"
 
 	"github.com/BurntSushi/toml"
 	"github.com/dedis/onet"
@@ -14,6 +15,8 @@ import (
 	"github.com/dedis/cothority"
 	"github.com/dedis/kyber/pairing"
 	"github.com/dedis/kyber/pairing/bn256"
+	"bls-ftcosi/cothority/protocols/byzcoin/blockchain"
+	"bls-ftcosi/cothority/protocols/byzcoin/blockchain/blkparser"
 )
 
 func init() {
@@ -27,6 +30,13 @@ func init() {
 	    Group: bn256.NewSuiteG2(),
 	}
 }
+
+
+var magicNum = [4]byte{0xF9, 0xBE, 0xB4, 0xD9}
+var blocksPath = "/home/christo/.bitcoin/blocks"
+const ReadFirstNBlocks = 66000
+var wantednTxs = 10000
+var transactions []blkparser.Tx
 
 // SimulationProtocol implements onet.Simulation.
 type SimulationProtocol struct {
@@ -57,7 +67,44 @@ func (s *SimulationProtocol) Setup(dir string, hosts []string) (
 	if err != nil {
 		return nil, err
 	}
+
+
+	// Initialize blockchain parser
+	parser, err := blockchain.NewParser(blocksPath, magicNum)
+	_ = parser
+	if err != nil {
+		return nil, err
+	}
+
+	transactions, err = parser.Parse(0, ReadFirstNBlocks)
+	if len(transactions) == 0 {
+		return nil, errors.New("Couldn't read any transactions.")
+	}
+	if err != nil {
+		log.Error("Error: Couldn't parse blocks in", blocksPath,
+			".\nPlease download bitcoin blocks as .dat files first and place them in",
+			blocksPath, "Either run a bitcoin node (recommended) or using a torrent.")
+		return nil, err
+	}
+	log.Lvl1("Got", len(transactions), "transactions")
+	if len(transactions) < wantednTxs {
+		log.Errorf("Read only %v but wanted %v", len(transactions), wantednTxs)
+	}
+
 	return sc, nil
+}
+
+
+// GetBlock returns the next block available from the transaction pool.
+func GetBlock(size int, transactions []blkparser.Tx, lastBlock string, lastKeyBlock string, priority int) (*blockchain.TrBlock, error) {
+	if len(transactions) < 1 {
+		return nil, errors.New("no transaction available")
+	}
+
+	trlist := blockchain.NewTransactionList(transactions, size)
+	header := blockchain.NewHeader(trlist, lastBlock, lastKeyBlock)
+	trblock := blockchain.NewTrBlock(trlist, header)
+	return trblock, nil
 }
 
 // Node can be used to initialize each node before it will be run
@@ -78,6 +125,16 @@ var proposal = []byte("dedis")
 
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
+	block, err := GetBlock(3000, transactions, "0", "0", 0)
+	if err != nil {
+		return err
+	}
+	binaryBlock, err := block.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	log.Lvl1("klklklk", len(binaryBlock))
+
 	size := config.Tree.Size()
 	thold := size * 2 / 3
 	log.Lvl1("Size is:", size, "rounds:", s.Rounds)
@@ -99,7 +156,7 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 		}
 		cosiProtocol := pi.(*protocol.BlsFtCosi)
 		cosiProtocol.CreateProtocol = config.Overlay.CreateProtocol
-		cosiProtocol.Msg = proposal
+		cosiProtocol.Msg = binaryBlock
 		cosiProtocol.NSubtrees = s.NSubtrees
 		cosiProtocol.Timeout = defaultTimeout
 
@@ -120,7 +177,7 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 
 		
 		verificationOnly := monitor.NewTimeMeasure("verificationOnly")
-		err = verifySignature(cosiProtocol.PairingSuite, signature, publics, proposal, protocol.NewThresholdPolicy(thold))
+		err = verifySignature(cosiProtocol.PairingSuite, signature, publics, binaryBlock, protocol.NewThresholdPolicy(thold))
 		if err != nil {
 			return err
 		}

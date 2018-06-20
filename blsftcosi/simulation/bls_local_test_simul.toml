@@ -1,9 +1,9 @@
 Simulation = "BlsFtCosiProtocol"
 Servers = 8
-Rounds = 10
+Rounds = 1
 CloseWait = 6000
 Suite = "bn256.g2"
 Tags = "vartime"
 
 Depth, Hosts, NSubTrees, FailingSubleaders, FailingLeafs
-2, 5, 1, 0, 0
+2, 1, 1, 0, 0
