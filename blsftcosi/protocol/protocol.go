@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"encoding/json"
+
 	"github.com/dedis/onet/network"
 	"github.com/dedis/onet"
 	"github.com/dedis/kyber"
@@ -82,7 +84,16 @@ var ThePairingSuite = bn256.NewSuite()
 // with an always-true verification.
 // Called by GlobalRegisterDefaultProtocols
 func NewDefaultProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
-	vf := func(a, b []byte) bool { return true }
+	vf := func(msg, data []byte) bool {
+		// Simulate verification function by sleeping
+		b, _ := json.Marshal(msg)
+		m := time.Duration(len(b) / (500 * 1024))  //verification of 150ms per 500KB simulated
+		waitTime := 150 * time.Millisecond * m
+		log.Lvl1("Verifying for", waitTime)
+		time.Sleep(waitTime)  
+
+		return true 
+	}
 	return NewBlsFtCosi(n, vf, DefaultSubProtocolName, ThePairingSuite)
 }
 
