@@ -1,0 +1,49 @@
+set ns [new Simulator]
+source tb_compat.tcl
+
+set server_count_g3 14
+set server_count_g8 18
+set server_count_sm 2
+set server_count_smX 1
+set server_delay 200ms
+set lanstr ""
+
+
+for {set i 0} {$i < 14} {incr i} {
+        set server($i) [$ns node]
+        tb-set-hardware $server($i) dl380g3
+        tb-set-node-os $server($i) Ubuntu1404-64-STD
+        append server_lanstr "$server($i) "
+}
+
+for {set i 14} {$i < 16} {incr i} {
+        set server($i) [$ns node]
+        tb-set-hardware $server($i) sm
+        tb-set-node-os $server($i) Ubuntu1404-64-STD
+        append server_lanstr "$server($i) "
+}
+
+for {set i 16} {$i < 17} {incr i} {
+        set server($i) [$ns node]
+        tb-set-hardware $server($i) smX10
+        tb-set-node-os $server($i) Ubuntu1404-64-STD
+        append server_lanstr "$server($i) "
+}
+
+for {set i 17} {$i < 33} {incr i} {
+        set server($i) [$ns node]
+        tb-set-hardware $server($i) dl360g8-6p
+        tb-set-node-os $server($i) Ubuntu1404-64-STD
+        append server_lanstr "$server($i) "
+}
+
+
+tb-use-endnodeshaping 1
+set serverlan [$ns make-lan "$server_lanstr" 35Mb $server_delay]
+
+for {set i 0} {$i < 33} {incr i} {
+        tb-set-ip-lan $server($i) $serverlan 10.255.0.[expr {$i + 1}]
+}
+
+$ns rtproto Static
+$ns run

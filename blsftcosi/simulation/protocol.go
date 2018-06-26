@@ -33,10 +33,9 @@ func init() {
 
 
 var magicNum = [4]byte{0xF9, 0xBE, 0xB4, 0xD9}
-var blocksPath = "/home/christo/.bitcoin/blocks"
+var blocksPath = "/users/csbenz/blocks" // "/home/christo/.bitcoin/blocks"
 const ReadFirstNBlocks = 66000
 var wantednTxs = 10000
-var transactions []blkparser.Tx
 
 // SimulationProtocol implements onet.Simulation.
 type SimulationProtocol struct {
@@ -59,16 +58,17 @@ func NewSimulationProtocol(config string) (onet.Simulation, error) {
 }
 
 // Setup implements onet.Simulation.
-func (s *SimulationProtocol) Setup(dir string, hosts []string) (
-	*onet.SimulationConfig, error) {
+func (s *SimulationProtocol) Setup(dir string, hosts []string) (*onet.SimulationConfig, error) {
 	sc := &onet.SimulationConfig{}
 	s.CreateRoster(sc, hosts, 2000)
 	err := s.CreateTree(sc)
 	if err != nil {
 		return nil, err
 	}
+	return sc, nil
+}
 
-
+func loadBlocks() ([]blkparser.Tx, error) {
 	// Initialize blockchain parser
 	parser, err := blockchain.NewParser(blocksPath, magicNum)
 	_ = parser
@@ -76,7 +76,7 @@ func (s *SimulationProtocol) Setup(dir string, hosts []string) (
 		return nil, err
 	}
 
-	transactions, err = parser.Parse(0, ReadFirstNBlocks)
+	transactions, err := parser.Parse(0, ReadFirstNBlocks)
 	if len(transactions) == 0 {
 		return nil, errors.New("Couldn't read any transactions.")
 	}
@@ -91,20 +91,7 @@ func (s *SimulationProtocol) Setup(dir string, hosts []string) (
 		log.Errorf("Read only %v but wanted %v", len(transactions), wantednTxs)
 	}
 
-	return sc, nil
-}
-
-
-// GetBlock returns the next block available from the transaction pool.
-func GetBlock(size int, transactions []blkparser.Tx, lastBlock string, lastKeyBlock string, priority int) (*blockchain.TrBlock, error) {
-	if len(transactions) < 1 {
-		return nil, errors.New("no transaction available")
-	}
-
-	trlist := blockchain.NewTransactionList(transactions, size)
-	header := blockchain.NewHeader(trlist, lastBlock, lastKeyBlock)
-	trblock := blockchain.NewTrBlock(trlist, header)
-	return trblock, nil
+	return transactions, nil
 }
 
 // Node can be used to initialize each node before it will be run
@@ -120,12 +107,19 @@ func (s *SimulationProtocol) Node(config *onet.SimulationConfig) error {
 	return s.SimulationBFTree.Node(config)
 }
 
-var defaultTimeout = 30 * time.Second
+var defaultTimeout = 100 * time.Second
 var proposal = []byte("dedis")
 
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
-	block, err := GetBlock(3000, transactions, "0", "0", 0)
+	transactions, err := loadBlocks()
+	if err != nil {
+		return err
+	}
+
+	log.Lvl1("Run got", len(transactions), "transactions")
+
+	block, err := GetBlock(12000, transactions, "0", "0", 0)
 	if err != nil {
 		return err
 	}
@@ -186,6 +180,20 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 	}
 
 	return nil
+}
+
+// GetBlock returns the next block available from the transaction pool.
+func GetBlock(size int, transactions []blkparser.Tx, lastBlock string, lastKeyBlock string, priority int) (*blockchain.TrBlock, error) {
+	log.Lvl1("GetBlock got", len(transactions), "transactions")
+
+	if len(transactions) < 1 {
+		return nil, errors.New("no transaction available")
+	}
+
+	trlist := blockchain.NewTransactionList(transactions, size)
+	header := blockchain.NewHeader(trlist, lastBlock, lastKeyBlock)
+	trblock := blockchain.NewTrBlock(trlist, header)
+	return trblock, nil
 }
 
 func getAndVerifySignature(cosiProtocol *protocol.BlsFtCosi, publics []kyber.Point,

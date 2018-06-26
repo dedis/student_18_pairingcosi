@@ -10,6 +10,8 @@ import (
 	"github.com/dedis/onet"
 	"github.com/dedis/onet/log"
 	"github.com/dedis/onet/network"
+	"github.com/dedis/onet/simul/monitor"
+
 )
 
 // Sign the message with this node and aggregates with all child signatures (in structResponses)
@@ -173,6 +175,7 @@ func Verify(suite pairing.Suite, publics []kyber.Point, message, sig []byte, pol
 	}
 
 	log.Lvl1("m.CountEnabled():", mask.CountEnabled())
+	monitor.RecordSingleMeasure("correct_nodes", float64(mask.CountEnabled()))
 
 
 	if !policy.Check(mask) {

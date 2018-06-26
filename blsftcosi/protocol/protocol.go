@@ -89,7 +89,7 @@ func NewDefaultProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error)
 		b, _ := json.Marshal(msg)
 		m := time.Duration(len(b) / (500 * 1024))  //verification of 150ms per 500KB simulated
 		waitTime := 150 * time.Millisecond * m
-		log.Lvl1("Verifying for", waitTime)
+		log.Lvl3("Verifying for", waitTime)
 		time.Sleep(waitTime)  
 
 		return true 

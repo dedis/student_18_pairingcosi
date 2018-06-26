@@ -57,10 +57,9 @@ func NewSimulationProtocol(config string) (onet.Simulation, error) {
 }
 
 var magicNum = [4]byte{0xF9, 0xBE, 0xB4, 0xD9}
-var blocksPath = "/home/christo/.bitcoin/blocks"
+var blocksPath = "/users/csbenz/blocks" // "/home/christo/.bitcoin/blocks"
 const ReadFirstNBlocks = 66000
 var wantednTxs = 10000
-var transactions []blkparser.Tx
 
 // Setup implements onet.Simulation.
 func (s *SimulationProtocol) Setup(dir string, hosts []string) (
@@ -71,7 +70,10 @@ func (s *SimulationProtocol) Setup(dir string, hosts []string) (
 	if err != nil {
 		return nil, err
 	}
+	return sc, nil
+}
 
+func loadBlocks() ([]blkparser.Tx, error) {
 	// Initialize blockchain parser
 	parser, err := blockchain.NewParser(blocksPath, magicNum)
 	_ = parser
@@ -79,7 +81,7 @@ func (s *SimulationProtocol) Setup(dir string, hosts []string) (
 		return nil, err
 	}
 
-	transactions, err = parser.Parse(0, ReadFirstNBlocks)
+	transactions, err := parser.Parse(0, ReadFirstNBlocks)
 	if len(transactions) == 0 {
 		return nil, errors.New("Couldn't read any transactions.")
 	}
@@ -94,7 +96,7 @@ func (s *SimulationProtocol) Setup(dir string, hosts []string) (
 		log.Errorf("Read only %v but wanted %v", len(transactions), wantednTxs)
 	}
 
-	return sc, nil
+	return transactions, nil
 }
 
 // Node can be used to initialize each node before it will be run
@@ -116,6 +118,13 @@ var defaultTimeout = 30 * time.Second
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 	log.SetDebugVisible(1)
+
+	transactions, err := loadBlocks()
+	if err != nil {
+		return err
+	}
+
+	log.Lvl1("Run got", len(transactions), "transactions")
 	
 	block, err := GetBlock(3000, transactions, "0", "0", 0)
 	if err != nil {
