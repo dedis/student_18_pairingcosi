@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	log.SetDebugVisible(3)
+	log.SetDebugVisible(1)
 	network.RegisterMessages(PrePrepare{}, Prepare{}, Commit{}, Reply{})
 	onet.GlobalProtocolRegister(DefaultProtocolName, NewProtocol)
 }
@@ -29,7 +29,7 @@ func init() {
 
 type VerificationFn func(msg []byte, data []byte) bool
 
-var defaultTimeout = 5 * time.Second
+var defaultTimeout = 60 * time.Second
 
 type PbftProtocol struct {
 	*onet.TreeNodeInstance
@@ -69,7 +69,7 @@ func NewProtocol(n *onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
 		b, _ := json.Marshal(msg)
 		m := time.Duration(len(b) / (500 * 1024))  //verification of 150ms per 500KB simulated
 		waitTime := 150 * time.Millisecond * m
-		log.Lvl1("Verifying for", waitTime)
+		log.Lvl3("Verifying for", waitTime)
 		time.Sleep(waitTime)  
 
 		return true 
@@ -207,7 +207,7 @@ loop:
 	if !(nReceivedPrepareMessages >= nRepliesThreshold) {
 		errors.New("node didn't receive enough prepare messages. Stopping.")
 	} else {
-		log.Lvl3(pbft.ServerIdentity(), "Received enough prepare messages (> 2/3 + 1):", nReceivedPrepareMessages, "/", pbft.nNodes)
+		log.Lvl1(pbft.ServerIdentity(), "Received enough prepare messages (> 2/3 + 1):", nReceivedPrepareMessages, "/", pbft.nNodes)
 	}
 
 	//digest := sha512.Sum512(pbft.Msg)
@@ -220,7 +220,7 @@ loop:
 
 	// Broadcast commit message
 	if errs := pbft.Broadcast(&Commit{Digest:futureDigest, Sender:pbft.ServerIdentity().ID.String(), Sig:signedDigest2}); len(errs) > 0 {
-		log.Lvl3(pbft.ServerIdentity(), "error while broadcasting commit message")
+		log.Lvl1(pbft.ServerIdentity(), "error while broadcasting commit message")
 	}
 
 	nReceivedCommitMessages := 0
@@ -246,9 +246,10 @@ commitLoop:
 	}
 
 	if !(nReceivedCommitMessages >= nRepliesThreshold) {
+		log.Lvl1(pbft.ServerIdentity(), "node didn't receive enough commit messages. Stopping.", nReceivedCommitMessages, " / ", nRepliesThreshold)
 		return errors.New("node didn't receive enough commit messages. Stopping.")
 	} else {
-		log.Lvl3(pbft.ServerIdentity(), "Received enough commit messages (> 2/3 + 1):", nReceivedCommitMessages, "/", pbft.nNodes)
+		log.Lvl1(pbft.ServerIdentity(), "Received enough commit messages (> 2/3 + 1):", nReceivedCommitMessages, "/", pbft.nNodes)
 	}
 
 	receivedReplies := 0

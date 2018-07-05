@@ -20,23 +20,33 @@ In the Node-method you can read the files that have been created by the
 */
 
 import (
-	//"errors"
+	"errors"
 	//"strconv"
 
 	"github.com/BurntSushi/toml"
 	"bls-ftcosi/bftcosi/protocol"
-	"gopkg.in/dedis/onet.v1"
-	"gopkg.in/dedis/onet.v1/log"
-	"gopkg.in/dedis/onet.v1/simul/monitor"
-	"gopkg.in/dedis/crypto.v0/abstract"
-	"gopkg.in/dedis/onet.v1/network"
-	"bls-ftcosi/bftcosi/cosi"
+	"github.com/dedis/onet"
+	"github.com/dedis/onet/log"
+
+	"github.com/dedis/onet/simul/monitor"
+
 	"fmt"
 	"time"
+
+	"bls-ftcosi/cothority/protocols/byzcoin/blockchain"
+	"bls-ftcosi/cothority/protocols/byzcoin/blockchain/blkparser"
 )
 
+var magicNum = [4]byte{0xF9, 0xBE, 0xB4, 0xD9}
+var blocksPath = "/users/csbenz/blocks" // "/home/christo/.bitcoin/blocks"
+const ReadFirstNBlocks = 66000
+var wantednTxs = 10000
+
 func init() {
-	onet.SimulationRegister("BFTCosiProtocol", NewSimulationProtocol)
+	onet.SimulationRegister("BFTCosiSimul", NewSimulationProtocol)
+	onet.GlobalProtocolRegister("BFTCosiSimul", func (n* onet.TreeNodeInstance) (onet.ProtocolInstance, error) {
+			return protocol.NewBFTCoSiProtocol(n,  func(msg []byte, data []byte) bool { return true })
+		})
 }
 
 // SimulationProtocol implements onet.Simulation.
@@ -79,6 +89,7 @@ func (s *SimulationProtocol) Node(config *onet.SimulationConfig) error {
 		log.Fatal("Didn't find this node in roster")
 	}
 
+/*
 	//get subleader ids
 	subleadersIds, err := protocol.GetSubleaderIDs(config.Tree, s.Hosts, s.NSubtrees)
 	if err != nil {
@@ -120,12 +131,33 @@ func (s *SimulationProtocol) Node(config *onet.SimulationConfig) error {
 		break //this node has been found
 		}
 	}
+	*/
 	log.Lvl3("Initializing node-index", index)
 	return s.SimulationBFTree.Node(config)
 }
 
+var defaultTimeout = 120 * time.Second
+
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
+
+	transactions, err := loadBlocks()
+	if err != nil {
+		return err
+	}
+
+	log.Lvl1("Run got", len(transactions), "transactions")
+
+	block, err := GetBlock(3000, transactions, "0", "0", 0)
+	if err != nil {
+		return err
+	}
+	binaryBlock, err := block.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+
 	log.SetDebugVisible(2)
 	size := config.Tree.Size()
 	log.Lvl2("Size is:", size, "rounds:", s.Rounds)
@@ -133,41 +165,81 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 		log.Lvl1("Starting round", round)
 		round := monitor.NewTimeMeasure("round")
 
-		proposal := []byte{0xFF}
-		p, err := config.Overlay.CreateProtocol(protocol.ProtocolName, config.Tree,
-			onet.NilServiceID)
+		p, err := config.Overlay.CreateProtocol("BFTCosiSimul", config.Tree, onet.NilServiceID)
 		if err != nil {
 			return err
 		}
-		proto := p.(*protocol.CoSiRootNode)
-		proto.NSubtrees = s.NSubtrees
-		proto.Proposal = proposal
-		proto.SubleaderTimeout = protocol.DefaultSubleaderTimeout / 3000
-		proto.LeavesTimeout = protocol.DefaultLeavesTimeout / 15000
-		proto.CreateProtocol = func(name string, t *onet.Tree) (onet.ProtocolInstance, error) {
-			return config.Overlay.CreateProtocol(name, t, onet.NilServiceID)
-		}
-		proto.ProtocolTimeout = 10* time.Second
+		proto := p.(*protocol.ProtocolBFTCoSi)
+		//proto.NSubtrees = s.NSubtrees
+		proto.Msg = binaryBlock
+		proto.Timeout = defaultTimeout
+		
 		go func() {
 			log.ErrFatal(p.Start())
 		}()
-		Signature := <-proto.FinalSignature
+		done := make(chan bool)
+		wait := time.Second * 80
+		proto.RegisterOnDone(func() {
+			done <- true
+		})
+		select {
+		case <-done:
+			sig := proto.Signature()
+			err := sig.Verify(proto.Suite(), proto.Roster().Publics())			
+			
+			if err != nil {
+				return fmt.Errorf("%s Verification of the signature refused: %s - %+v", proto.Name(), err.Error(), sig.Sig)
+			}
+			
+		case <-time.After(wait):
+			log.Lvl1("Going to break because of timeout")
+			return errors.New("Waited " + wait.String() + " for BFTCoSi to finish ...")
+		}
 		round.Record()
 
-		//get public keys
-		publics := make([]abstract.Point, config.Tree.Size())
-		for i, node := range config.Tree.List() {
-			publics[i] = node.ServerIdentity.Public
-		}
-
-		//verify signature
-		threshold := s.Hosts - s.FailingLeafs - s.FailingSubleaders
-		err = cosi.Verify(network.Suite, publics, proposal, Signature, cosi.ThresholdPolicy{threshold})
-		if err != nil {
-			return fmt.Errorf("error while verifying signature:%s", err)
-		}
 		log.Lvl2("Signature correctly verified!")
 
 	}
 	return nil
+}
+
+
+func loadBlocks() ([]blkparser.Tx, error) {
+	// Initialize blockchain parser
+	parser, err := blockchain.NewParser(blocksPath, magicNum)
+	_ = parser
+	if err != nil {
+		return nil, err
+	}
+
+	transactions, err := parser.Parse(0, ReadFirstNBlocks)
+	if len(transactions) == 0 {
+		return nil, errors.New("Couldn't read any transactions.")
+	}
+	if err != nil {
+		log.Error("Error: Couldn't parse blocks in", blocksPath,
+			".\nPlease download bitcoin blocks as .dat files first and place them in",
+			blocksPath, "Either run a bitcoin node (recommended) or using a torrent.")
+		return nil, err
+	}
+	log.Lvl1("Got", len(transactions), "transactions")
+	if len(transactions) < wantednTxs {
+		log.Errorf("Read only %v but wanted %v", len(transactions), wantednTxs)
+	}
+
+	return transactions, nil
+}
+
+// GetBlock returns the next block available from the transaction pool.
+func GetBlock(size int, transactions []blkparser.Tx, lastBlock string, lastKeyBlock string, priority int) (*blockchain.TrBlock, error) {
+	log.Lvl1("GetBlock got", len(transactions), "transactions")
+
+	if len(transactions) < 1 {
+		return nil, errors.New("no transaction available")
+	}
+
+	trlist := blockchain.NewTransactionList(transactions, size)
+	header := blockchain.NewHeader(trlist, lastBlock, lastKeyBlock)
+	trblock := blockchain.NewTrBlock(trlist, header)
+	return trblock, nil
 }

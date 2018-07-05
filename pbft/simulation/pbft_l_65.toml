@@ -1,0 +1,8 @@
+Simulation = "PBFTProtocol"
+Servers = 35
+Rounds = 10
+RunWait = "6000s"
+Suite = "Ed25519"
+
+Hosts, BF, FailingSubleaders, FailingLeafs
+65, 64, 0, 0

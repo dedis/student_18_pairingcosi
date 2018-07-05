@@ -107,7 +107,7 @@ func (s *SimulationProtocol) Node(config *onet.SimulationConfig) error {
 	return s.SimulationBFTree.Node(config)
 }
 
-var defaultTimeout = 100 * time.Second
+var defaultTimeout = 200 * time.Second
 var proposal = []byte("dedis")
 
 // Run implements onet.Simulation.
@@ -119,7 +119,7 @@ func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
 
 	log.Lvl1("Run got", len(transactions), "transactions")
 
-	block, err := GetBlock(12000, transactions, "0", "0", 0)
+	block, err := GetBlock(6000, transactions, "0", "0", 0)
 	if err != nil {
 		return err
 	}

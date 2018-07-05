@@ -1,0 +1,9 @@
+Simulation = "BlsFtCosiProtocol"
+Servers = 5
+Rounds = 10
+RunWait = "6000s"
+Suite = "bn256.g2"
+Tags = "vartime"
+
+Depth, Hosts, NSubTrees, FailingSubleaders, FailingLeafs
+2, 5, 3, 0, 0

@@ -1,9 +1,9 @@
-Simulation = "BFTCosiProtocol"
+Simulation = "BFTCosiSimul"
 Servers = 8
-Bf = 4
-Rounds = 10
+Bf = 139
+Rounds = 1
 CloseWait = 6000
 Suite = "Ed25519"
 
 Hosts, NSubtrees, FailingSubleaders,FailingLeafs
-10, 3, 0, 0
+140, 2, 0, 0

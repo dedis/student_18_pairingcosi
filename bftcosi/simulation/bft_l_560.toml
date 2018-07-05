@@ -1,0 +1,9 @@
+Simulation = "BFTCosiSimul"
+Servers = 35
+Bf = 559
+Rounds = 10
+RunWait = "6000s"
+Suite = "Ed25519"
+
+Hosts, NSubtrees, FailingSubleaders,FailingLeafs
+560, 25, 0, 0

@@ -113,7 +113,7 @@ func (s *SimulationProtocol) Node(config *onet.SimulationConfig) error {
 }
 
 var proposal = []byte("dedis")
-var defaultTimeout = 30 * time.Second
+var defaultTimeout = 120 * time.Second
 
 // Run implements onet.Simulation.
 func (s *SimulationProtocol) Run(config *onet.SimulationConfig) error {
