@@ -1,0 +1,13 @@
+language: go
+
+go:
+  - 1.6
+
+install:
+  - ./install.sh
+
+script:
+  - make test_verbose
+
+notifications:
+  email: false
